@@ -1,0 +1,17 @@
+CREATE TABLE hotel (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    city_id BIGINT NOT NULL,
+    name VARCHAR(200) NOT NULL,
+    stars TINYINT NOT NULL,
+    address VARCHAR(300) NOT NULL,
+    email VARCHAR(150) NULL,
+    phone VARCHAR(50) NULL,
+    check_in_time TIME NOT NULL DEFAULT '15:00:00',
+    check_out_time TIME NOT NULL DEFAULT '11:00:00',
+    latitude DECIMAL(10, 7) NULL,
+    longitude DECIMAL(10, 7) NULL,
+    margin DECIMAL(5, 2) NOT NULL DEFAULT 0.00,
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (city_id) REFERENCES city(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

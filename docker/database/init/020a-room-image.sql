@@ -1,0 +1,9 @@
+CREATE TABLE room_image (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    hotel_provider_room_type_id BIGINT NOT NULL,
+    url VARCHAR(500) NOT NULL,
+    alt_text VARCHAR(200) NULL,
+    sort_order INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (hotel_provider_room_type_id) REFERENCES hotel_provider_room_type(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

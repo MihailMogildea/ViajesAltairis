@@ -1,0 +1,9 @@
+CREATE TABLE country (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    iso_code CHAR(2) NOT NULL UNIQUE,
+    name VARCHAR(100) NOT NULL,
+    currency_id BIGINT NOT NULL,
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (currency_id) REFERENCES currency(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
