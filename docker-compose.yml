@@ -5,8 +5,6 @@ services:
       dockerfile: Dockerfile
     platform: linux/amd64
     restart: unless-stopped
-    ports:
-      - "3306:3306"
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
       MYSQL_DATABASE: ${DB_NAME}
@@ -22,8 +20,6 @@ services:
     platform: linux/amd64
     restart: unless-stopped
     command: redis-server --requirepass ${REDIS_PASSWORD}
-    ports:
-      - "6379:6379"
     volumes:
       - redis-data:/data
     networks:
@@ -31,29 +27,47 @@ services:
 
   admin-api:
     build:
-      context: ./docker/admin-api
-      dockerfile: Dockerfile
+      context: ./docker
+      dockerfile: admin-api/Dockerfile
     platform: linux/amd64
     restart: unless-stopped
     ports:
       - "5001:8080"
+    environment:
+      ConnectionStrings__DefaultConnection: "Server=database;Port=3306;Database=${DB_NAME};User=${DB_USER};Password=${DB_PASSWORD};CharSet=utf8mb4"
+      Redis__ConnectionString: "redis:6379,password=${REDIS_PASSWORD}"
+      Encryption__Key: "${ENCRYPTION_KEY}"
+      Jwt__SecretKey: "${JWT_SECRET}"
+      ScheduledApi__BaseUrl: "http://scheduled-api:8080/"
+      ReservationsApi__BaseUrl: "http://reservations-api:8080/"
     depends_on:
       - database
       - redis
+      - scheduled-api
+      - reservations-api
     networks:
       - altairis-network
 
   client-api:
     build:
-      context: ./docker/client-api
-      dockerfile: Dockerfile
+      context: ./docker
+      dockerfile: client-api/Dockerfile
     platform: linux/amd64
     restart: unless-stopped
     ports:
       - "5002:8080"
+    environment:
+      ConnectionStrings__DefaultConnection: "Server=database;Port=3306;Database=${DB_NAME};User=${DB_USER};Password=${DB_PASSWORD};CharSet=utf8mb4"
+      Redis__ConnectionString: "redis:6379,password=${REDIS_PASSWORD}"
+      Encryption__Key: "${ENCRYPTION_KEY}"
+      Jwt__SecretKey: "${JWT_SECRET}"
+      ReservationsApi__BaseUrl: "http://reservations-api:8080"
+      ProvidersApi__BaseUrl: "http://providers-api:8080"
     depends_on:
       - database
       - redis
+      - reservations-api
+      - providers-api
     networks:
       - altairis-network
 
@@ -63,8 +77,9 @@ services:
       dockerfile: Dockerfile
     platform: linux/amd64
     restart: unless-stopped
-    ports:
-      - "5003:8080"
+    environment:
+      ConnectionStrings__DefaultConnection: "Server=database;Port=3306;Database=${DB_NAME};User=${DB_USER};Password=${DB_PASSWORD};CharSet=utf8mb4"
+      Redis__ConnectionString: "redis:6379,password=${REDIS_PASSWORD}"
     depends_on:
       - database
       - redis
@@ -73,12 +88,18 @@ services:
 
   external-client-api:
     build:
-      context: ./docker/external-client-api
-      dockerfile: Dockerfile
+      context: ./docker
+      dockerfile: external-client-api/Dockerfile
     platform: linux/amd64
     restart: unless-stopped
     ports:
       - "5005:8080"
+    environment:
+      ConnectionStrings__DefaultConnection: "Server=database;Port=3306;Database=${DB_NAME};User=${DB_USER};Password=${DB_PASSWORD};CharSet=utf8mb4"
+      Redis__ConnectionString: "redis:6379,password=${REDIS_PASSWORD}"
+      Encryption__Key: "${ENCRYPTION_KEY}"
+      Jwt__SecretKey: "${JWT_SECRET}"
+      ReservationsApi__BaseUrl: "http://reservations-api:8080"
     depends_on:
       - database
       - redis
@@ -88,12 +109,14 @@ services:
 
   reservations-api:
     build:
-      context: ./docker/reservations-api
-      dockerfile: Dockerfile
+      context: ./docker
+      dockerfile: reservations-api/Dockerfile
     platform: linux/amd64
     restart: unless-stopped
-    ports:
-      - "5004:8080"
+    environment:
+      ConnectionStrings__DefaultConnection: "Server=database;Port=3306;Database=${DB_NAME};User=${DB_USER};Password=${DB_PASSWORD};CharSet=utf8mb4"
+      Redis__ConnectionString: "redis:6379,password=${REDIS_PASSWORD}"
+      Encryption__Key: "${ENCRYPTION_KEY}"
     depends_on:
       - database
       - redis
@@ -102,12 +125,14 @@ services:
 
   scheduled-api:
     build:
-      context: ./docker/scheduled-api
-      dockerfile: Dockerfile
+      context: ./docker
+      dockerfile: scheduled-api/Dockerfile
     platform: linux/amd64
     restart: unless-stopped
-    ports:
-      - "5006:8080"
+    environment:
+      ConnectionStrings__DefaultConnection: "Server=database;Port=3306;Database=${DB_NAME};User=${DB_USER};Password=${DB_PASSWORD};CharSet=utf8mb4"
+      Redis__ConnectionString: "redis:6379,password=${REDIS_PASSWORD}"
+      Encryption__Key: "${ENCRYPTION_KEY}"
     depends_on:
       - database
       - redis
@@ -131,6 +156,8 @@ services:
     build:
       context: ./docker/client-web
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:5002/api
     platform: linux/amd64
     restart: unless-stopped
     ports:
@@ -140,9 +167,75 @@ services:
     networks:
       - altairis-network
 
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    platform: linux/amd64
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    networks:
+      - altairis-network
+
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.66.0
+    platform: linux/amd64
+    restart: unless-stopped
+    environment:
+      REDIS_ADDR: "redis://redis:6379"
+      REDIS_PASSWORD: "${REDIS_PASSWORD}"
+    depends_on:
+      - redis
+    networks:
+      - altairis-network
+
+  mysqld-exporter:
+    image: prom/mysqld-exporter:v0.16.0
+    platform: linux/amd64
+    restart: unless-stopped
+    environment:
+      DATA_SOURCE_NAME: "${DB_USER}:${DB_PASSWORD}@(database:3306)/${DB_NAME}"
+    depends_on:
+      - database
+    networks:
+      - altairis-network
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    platform: linux/amd64
+    restart: unless-stopped
+    volumes:
+      - ./docker/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    depends_on:
+      - cadvisor
+      - redis-exporter
+      - mysqld-exporter
+    networks:
+      - altairis-network
+
+  grafana:
+    image: grafana/grafana:11.2.2
+    platform: linux/amd64
+    restart: unless-stopped
+    ports:
+      - "3003:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_ADMIN_PASSWORD}"
+    volumes:
+      - ./docker/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - altairis-network
+
 volumes:
   mariadb-data:
   redis-data:
+  prometheus-data:
+  grafana-data:
 
 networks:
   altairis-network:

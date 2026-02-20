@@ -1,0 +1,3 @@
+namespace ViajesAltairis.Application.Features.Admin.HotelProviderRoomTypeAmenities.Dtos;
+
+public record AssignHotelProviderRoomTypeAmenityRequest(long HotelProviderRoomTypeId, long AmenityId);

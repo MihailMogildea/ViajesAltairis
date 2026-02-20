@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="../../../kernel/project/ViajesAltairis.Domain/ViajesAltairis.Domain.csproj" />
+    <ProjectReference Include="../../../kernel/project/ViajesAltairis.Application/ViajesAltairis.Application.csproj" />
+    <ProjectReference Include="../../../kernel/project/ViajesAltairis.Data/ViajesAltairis.Data.csproj" />
+    <ProjectReference Include="../../../kernel/project/ViajesAltairis.Infrastructure/ViajesAltairis.Infrastructure.csproj" />
+    <ProjectReference Include="../../../scheduled-api/project/ViajesAltairis.ScheduledApi.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Hangfire.InMemory" Version="1.0.*" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.0" />
+  </ItemGroup>
+
+</Project>

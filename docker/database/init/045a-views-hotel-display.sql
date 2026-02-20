@@ -23,7 +23,11 @@ JOIN city c                ON c.id = h.city_id
 JOIN administrative_division ad ON ad.id = c.administrative_division_id
 JOIN country co            ON co.id = ad.country_id
 LEFT JOIN review r         ON r.hotel_id = h.id AND r.visible = TRUE
-LEFT JOIN cancellation_policy cp ON cp.hotel_id = h.id AND cp.enabled = TRUE
+LEFT JOIN cancellation_policy cp ON cp.id = (
+    SELECT cp2.id FROM cancellation_policy cp2
+    WHERE cp2.hotel_id = h.id AND cp2.enabled = TRUE
+    ORDER BY cp2.id LIMIT 1
+)
 GROUP BY h.id, h.name, h.stars,
          c.id, c.name,
          ad.id, ad.name,
@@ -61,7 +65,11 @@ JOIN city c                ON c.id = h.city_id
 JOIN administrative_division ad ON ad.id = c.administrative_division_id
 JOIN country co            ON co.id = ad.country_id
 LEFT JOIN review r         ON r.hotel_id = h.id AND r.visible = TRUE
-LEFT JOIN cancellation_policy cp ON cp.hotel_id = h.id AND cp.enabled = TRUE
+LEFT JOIN cancellation_policy cp ON cp.id = (
+    SELECT cp2.id FROM cancellation_policy cp2
+    WHERE cp2.hotel_id = h.id AND cp2.enabled = TRUE
+    ORDER BY cp2.id LIMIT 1
+)
 GROUP BY h.id, h.name, h.stars, h.address, h.email, h.phone,
          h.check_in_time, h.check_out_time, h.latitude, h.longitude,
          h.margin, h.enabled,
@@ -78,6 +86,7 @@ SELECT
     h.name            AS hotel_name,
     p.id              AS provider_id,
     p.name            AS provider_name,
+    p.type_id         AS provider_type_id,
     rt.id             AS room_type_id,
     rt.name           AS room_type_name,
     hprt.capacity,

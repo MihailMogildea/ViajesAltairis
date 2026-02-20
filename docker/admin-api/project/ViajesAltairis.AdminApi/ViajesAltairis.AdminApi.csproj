@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.0" />
+    <PackageReference Include="prometheus-net.AspNetCore" Version="8.2.1" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="7.2.0" />
+    <PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
+    <PackageReference Include="MediatR" Version="12.4.1" />
+    <PackageReference Include="FluentValidation" Version="11.11.0" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="11.11.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\kernel\project\ViajesAltairis.Domain\ViajesAltairis.Domain.csproj" />
+    <ProjectReference Include="..\..\..\kernel\project\ViajesAltairis.Application\ViajesAltairis.Application.csproj" />
+    <ProjectReference Include="..\..\..\kernel\project\ViajesAltairis.Data\ViajesAltairis.Data.csproj" />
+    <ProjectReference Include="..\..\..\kernel\project\ViajesAltairis.Infrastructure\ViajesAltairis.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

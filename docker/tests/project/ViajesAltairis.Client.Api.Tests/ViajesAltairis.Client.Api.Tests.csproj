@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../../kernel/project/ViajesAltairis.Domain/ViajesAltairis.Domain.csproj" />
+    <ProjectReference Include="../../../kernel/project/ViajesAltairis.Application/ViajesAltairis.Application.csproj" />
+    <ProjectReference Include="../../../kernel/project/ViajesAltairis.Data/ViajesAltairis.Data.csproj" />
+    <ProjectReference Include="../../../kernel/project/ViajesAltairis.Infrastructure/ViajesAltairis.Infrastructure.csproj" />
+    <ProjectReference Include="../../../client-api/project/ViajesAltairis.ClientApi/ViajesAltairis.ClientApi.csproj" />
+  </ItemGroup>
+
+</Project>
