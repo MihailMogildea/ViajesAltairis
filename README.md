@@ -61,30 +61,34 @@ All credentials are in `.env` (committed for MVP convenience).
 ## Architecture
 
 ```
-                                    ┌──────────────┐
-                                    │  admin-web   │
-                                    │    :3001     │
-                                    └──────┬───────┘
-                                           │
-┌──────────────┐   ┌──────────────┐   ┌────▼─────────┐   ┌───────────────┐
-│  client-web  │──▶│  client-api  │──▶│  admin-api   │──▶│ scheduled-api │
-│    :3002     │   │    :5002     │   │    :5001     │   │  (internal)   │
-└──────────────┘   └──────┬───────┘   └──────┬───────┘   └───────────────┘
-                          │                  │
-                          ▼                  ▼
-                   ┌──────────────┐   ┌──────────────┐
-                   │ reservations │   │ providers    │
-                   │ (internal)   │   │ (internal)   │
-                   └──────┬───────┘   └──────┬───────┘
-                          │                  │
-                   ┌──────▼──────────────────▼───────┐
-                   │   database + redis (internal)    │
-                   └─────────────────────────────────┘
-
-┌──────────────────┐
-│external-client-api│──▶ reservations-api (B2B flow)
-│      :5005       │
-└──────────────────┘
+┌──────────────┐   ┌──────────────┐   ┌────────────────────┐
+│  client-web  │   │  admin-web   │   │external-client-api │
+│    :3002     │   │    :3001     │   │      :5005         │
+└──────┬───────┘   └──────┬───────┘   └────────┬───────────┘
+       │                  │                    │
+┌──────▼───────┐   ┌──────▼───────┐            │
+│  client-api  │   │  admin-api   │            │
+│    :5002     │   │    :5001     │            │
+└──────┬───────┘   └──┬───────┬───┘            │
+       │              │       │                │
+       │              │  ┌────▼──────────┐     │
+       │              │  │ scheduled-api │     │
+       │              │  │  (internal)   │     │
+       │              │  └────┬──────────┘     │
+       │              │       │                │
+       │              │  ┌────▼──────────┐     │
+       │              │  │ providers-api │     │
+       │              │  │  (internal)   │     │
+       │              │  └───────────────┘     │
+       │              │                        │
+       ▼              ▼                        ▼
+┌──────────────────────────────────────────────────┐
+│            reservations-api (internal)           │
+└─────────────────────┬────────────────────────────┘
+                      │
+┌─────────────────────▼────────────────────────────┐
+│           database + redis (internal)            │
+└──────────────────────────────────────────────────┘
 
 Exposed: admin-web, admin-api, client-web, client-api, external-client-api, grafana
 Internal: database, redis, reservations-api, providers-api, scheduled-api, prometheus
