@@ -14,4 +14,8 @@ public record RoomCatalogDto(
 
 public record BoardOptionDto(long HotelProviderRoomTypeBoardId, string BoardTypeName, decimal PricePerNight, bool Enabled);
 
-public record HotelAmenityDto(string AmenityName, string AmenityCategoryName);
+public class HotelAmenityDto
+{
+    public string AmenityName { get; set; } = string.Empty;
+    public string AmenityCategoryName { get; set; } = string.Empty;
+}

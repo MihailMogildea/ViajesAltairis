@@ -46,7 +46,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .HasForeignKey(e => e.BusinessPartnerId);
 
         builder.HasOne(e => e.Provider)
-            .WithMany()
+            .WithMany(e => e.Users)
             .HasForeignKey(e => e.ProviderId);
     }
 }

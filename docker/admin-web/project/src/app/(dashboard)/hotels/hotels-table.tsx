@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { createHotel, deleteHotel, toggleHotelEnabled } from "./actions";
 import { DataTable, type Column } from "@/components/data-table";
@@ -60,12 +60,35 @@ export function HotelsTable({
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
+  const [filterStars, setFilterStars] = useState<number | null>(null);
+  const [filterEnabled, setFilterEnabled] = useState<boolean | null>(null);
+  const [searchText, setSearchText] = useState("");
+
   const isFull = access === "full";
 
   const cityMap = new Map(cities.map((c) => [c.id, c.name]));
   const cityOptions = cities
     .filter((c) => c.enabled)
     .map((c) => ({ value: c.id, label: c.name }));
+
+  const filtered = useMemo(() => {
+    let result = items;
+    if (filterStars !== null) {
+      result = result.filter((h) => h.stars === filterStars);
+    }
+    if (filterEnabled !== null) {
+      result = result.filter((h) => h.enabled === filterEnabled);
+    }
+    if (searchText.trim()) {
+      const q = searchText.trim().toLowerCase();
+      result = result.filter(
+        (h) =>
+          h.name.toLowerCase().includes(q) ||
+          (cityMap.get(h.cityId) ?? "").toLowerCase().includes(q)
+      );
+    }
+    return result;
+  }, [items, filterStars, filterEnabled, searchText, cityMap]);
 
   function openCreate() {
     setForm(emptyForm);
@@ -143,10 +166,18 @@ export function HotelsTable({
     }
   }
 
+  const pillClass = (active: boolean) =>
+    `rounded-full px-3 py-1 text-xs font-medium ${
+      active
+        ? "bg-blue-600 text-white"
+        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+    }`;
+
   const columns: Column<HotelDto>[] = [
     {
       key: "name",
       header: t["admin.field.name"] ?? "Name",
+      sortable: true,
       render: (item) => (
         <Link
           href={`/hotels/${item.id}`}
@@ -159,6 +190,7 @@ export function HotelsTable({
     {
       key: "stars",
       header: t["admin.field.stars"] ?? "Stars",
+      sortable: true,
       render: (item) => (
         <span className="text-amber-500">
           {"★".repeat(item.stars)}
@@ -173,6 +205,7 @@ export function HotelsTable({
     {
       key: "margin",
       header: t["admin.field.margin"] ?? "Margin",
+      sortable: true,
       render: (item) => <span>{item.margin}%</span>,
     },
     {
@@ -219,9 +252,48 @@ export function HotelsTable({
         />
       )}
 
+      {/* Filters */}
+      <div className="mb-4 space-y-3">
+        {/* Search */}
+        <input
+          type="text"
+          placeholder={t["admin.field.search"] ?? "Search by name or city..."}
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)}
+          className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none sm:w-64"
+        />
+
+        <div className="flex flex-wrap items-center gap-4">
+          {/* Stars filter */}
+          <div className="flex flex-wrap gap-2">
+            <button onClick={() => setFilterStars(null)} className={pillClass(filterStars === null)}>
+              {t["admin.label.all"] ?? "All"}
+            </button>
+            {[3, 4, 5].map((s) => (
+              <button key={s} onClick={() => setFilterStars(s)} className={pillClass(filterStars === s)}>
+                {s}★
+              </button>
+            ))}
+          </div>
+
+          {/* Enabled filter */}
+          <div className="flex flex-wrap gap-2">
+            <button onClick={() => setFilterEnabled(null)} className={pillClass(filterEnabled === null)}>
+              {t["admin.label.all"] ?? "All"}
+            </button>
+            <button onClick={() => setFilterEnabled(true)} className={pillClass(filterEnabled === true)}>
+              {t["admin.label.enabled"] ?? "Enabled"}
+            </button>
+            <button onClick={() => setFilterEnabled(false)} className={pillClass(filterEnabled === false)}>
+              {t["admin.label.disabled"] ?? "Disabled"}
+            </button>
+          </div>
+        </div>
+      </div>
+
       <DataTable
         columns={columns}
-        data={items}
+        data={filtered}
         keyField="id"
         emptyMessage={t["admin.hotels.empty"] ?? "No hotels found."}
         actions={

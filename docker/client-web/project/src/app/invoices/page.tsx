@@ -5,12 +5,13 @@ import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { useLocale } from "@/context/LocaleContext";
 import { formatPrice, formatDate } from "@/lib/utils";
-import { apiGetInvoices, apiGetInvoiceDetail } from "@/lib/api";
+import { apiGetInvoices, apiGetInvoiceDetail, apiDownloadInvoicePdf } from "@/lib/api";
 import type { ApiInvoiceSummary, ApiInvoiceDetail } from "@/types";
 
-const statusColors: Record<string, string> = {
-  pending: "bg-yellow-100 text-yellow-700",
-  paid: "bg-green-100 text-green-700",
+const statusColors: Record<number, string> = {
+  1: "bg-yellow-100 text-yellow-700",  // created
+  2: "bg-green-100 text-green-700",    // paid
+  3: "bg-blue-100 text-blue-700",      // refunded
 };
 
 export default function InvoicesPage() {
@@ -20,22 +21,24 @@ export default function InvoicesPage() {
   const [loaded, setLoaded] = useState(false);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [details, setDetails] = useState<Record<number, ApiInvoiceDetail>>({});
+  const [downloading, setDownloading] = useState<number | null>(null);
 
   const fp = (amount: number, cur?: string) => formatPrice(amount, cur || currency.code, locale);
 
   useEffect(() => {
     if (!user) return;
+    setDetails({});
     apiGetInvoices()
       .then((res) => { setInvoices(res.invoices); setLoaded(true); })
       .catch(() => setLoaded(true));
-  }, [user]);
+  }, [user, locale]);
 
   useEffect(() => {
     if (expandedId === null || details[expandedId]) return;
     apiGetInvoiceDetail(expandedId)
       .then((d) => setDetails((prev) => ({ ...prev, [expandedId]: d })))
       .catch(() => {});
-  }, [expandedId, details]);
+  }, [expandedId, details, locale]);
 
   if (!user) {
     return (
@@ -83,7 +86,7 @@ export default function InvoicesPage() {
               <div className="flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-mono text-sm font-semibold text-gray-900">{inv.invoiceNumber}</span>
-                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColors[inv.status] || "bg-gray-100 text-gray-600"}`}>
+                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColors[inv.statusId] || "bg-gray-100 text-gray-600"}`}>
                     {inv.status}
                   </span>
                 </div>
@@ -121,12 +124,28 @@ export default function InvoicesPage() {
                         {details[inv.id].paidAt ? formatDate(details[inv.id].paidAt!, locale) : t("client.invoices.not_paid")}
                       </p>
                     </div>
-                    <Link
-                      href="/reservations"
-                      className="mt-3 inline-block text-sm font-medium text-blue-600 hover:underline"
-                    >
-                      {t("client.invoices.view_reservation")}
-                    </Link>
+                    <div className="mt-3 flex items-center gap-4">
+                      <button
+                        onClick={async () => {
+                          setDownloading(inv.id);
+                          try { await apiDownloadInvoicePdf(inv.id); } catch { }
+                          setDownloading(null);
+                        }}
+                        disabled={downloading === inv.id}
+                        className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:underline disabled:opacity-50"
+                      >
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17v3a2 2 0 002 2h14a2 2 0 002-2v-3" />
+                        </svg>
+                        {downloading === inv.id ? t("client.invoices.downloading") : t("client.invoices.download_pdf")}
+                      </button>
+                      <Link
+                        href="/reservations"
+                        className="text-sm font-medium text-blue-600 hover:underline"
+                      >
+                        {t("client.invoices.view_reservation")}
+                      </Link>
+                    </div>
                   </div>
                 ) : (
                   <p className="text-sm text-gray-400">{t("client.invoices.loading")}</p>

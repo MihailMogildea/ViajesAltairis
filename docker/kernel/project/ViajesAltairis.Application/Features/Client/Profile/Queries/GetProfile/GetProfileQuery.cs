@@ -17,5 +17,7 @@ public class GetProfileResponse
     public string PreferredLanguage { get; set; } = string.Empty;
     public string PreferredCurrency { get; set; } = string.Empty;
     public decimal Discount { get; set; }
+    public string? SubscriptionType { get; set; }
+    public decimal? SubscriptionDiscount { get; set; }
     public DateTime CreatedAt { get; set; }
 }

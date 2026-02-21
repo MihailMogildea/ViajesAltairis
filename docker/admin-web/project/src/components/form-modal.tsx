@@ -10,6 +10,7 @@ interface FormModalProps {
   loading?: boolean;
   saveLabel?: string;
   cancelLabel?: string;
+  wide?: boolean;
   children: React.ReactNode;
 }
 
@@ -21,6 +22,7 @@ export function FormModal({
   loading = false,
   saveLabel = "Save",
   cancelLabel = "Cancel",
+  wide = false,
   children,
 }: FormModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -44,7 +46,7 @@ export function FormModal({
         if (e.target === overlayRef.current) onClose();
       }}
     >
-      <div className="w-full max-w-lg rounded-lg bg-white shadow-lg">
+      <div className={`w-full rounded-lg bg-white shadow-lg ${wide ? "max-w-2xl" : "max-w-lg"}`}>
         <div className="border-b border-gray-200 px-6 py-4">
           <h3 className="text-lg font-semibold">{title}</h3>
         </div>

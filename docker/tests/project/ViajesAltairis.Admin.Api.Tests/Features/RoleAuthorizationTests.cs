@@ -67,6 +67,8 @@ public class RoleAuthorizationTests
     [InlineData("/api/invoices")]
     [InlineData("/api/hotelblackouts")]
     [InlineData("/api/reviews")]
+    [InlineData("/api/currencies")]
+    [InlineData("/api/providers")]
     public async Task ManagerRole_GetAccess(string path)
     {
         var client = TestAuthHelper.CreateAuthenticatedClient(_factory, userTypeId: 2);
@@ -76,8 +78,6 @@ public class RoleAuthorizationTests
     }
 
     [Theory]
-    [InlineData("/api/currencies")]
-    [InlineData("/api/providers")]
     [InlineData("/api/auditlogs")]
     public async Task ManagerRole_DeniedSections(string path)
     {
@@ -108,6 +108,9 @@ public class RoleAuthorizationTests
     [InlineData("/api/businesspartners")]
     [InlineData("/api/subscriptiontypes")]
     [InlineData("/api/invoices")]
+    [InlineData("/api/currencies")]
+    [InlineData("/api/providers")]
+    [InlineData("/api/users")]
     public async Task AgentRole_AllowedSections(string path)
     {
         var client = TestAuthHelper.CreateAuthenticatedClient(_factory, userTypeId: 3);
@@ -117,9 +120,6 @@ public class RoleAuthorizationTests
     }
 
     [Theory]
-    [InlineData("/api/currencies")]
-    [InlineData("/api/providers")]
-    [InlineData("/api/users")]
     [InlineData("/api/hotelblackouts")]
     [InlineData("/api/reviews")]
     [InlineData("/api/auditlogs")]
@@ -138,6 +138,11 @@ public class RoleAuthorizationTests
     [InlineData("/api/invoices")]
     [InlineData("/api/hotelblackouts")]
     [InlineData("/api/reviews")]
+    [InlineData("/api/currencies")]
+    [InlineData("/api/providers")]
+    [InlineData("/api/users")]
+    [InlineData("/api/businesspartners")]
+    [InlineData("/api/subscriptiontypes")]
     public async Task HotelStaffRole_AllowedSections(string path)
     {
         var client = TestAuthHelper.CreateAuthenticatedClient(_factory, userTypeId: 4);
@@ -147,12 +152,7 @@ public class RoleAuthorizationTests
     }
 
     [Theory]
-    [InlineData("/api/currencies")]
-    [InlineData("/api/providers")]
-    [InlineData("/api/users")]
-    [InlineData("/api/businesspartners")]
     [InlineData("/api/seasonalmargins")]
-    [InlineData("/api/subscriptiontypes")]
     [InlineData("/api/auditlogs")]
     public async Task HotelStaffRole_DeniedSections(string path)
     {

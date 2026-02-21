@@ -18,6 +18,8 @@ import type {
   ApiSubscribeResponse,
   ApiCancellationPolicy,
   ApiCountry,
+  ApiHotelTax,
+  ApiPaymentMethod,
 } from "@/types";
 import { LOCALE_STORAGE_KEY, DEFAULT_LOCALE } from "./locale";
 
@@ -91,7 +93,9 @@ async function apiFetch<T>(
 
   if (res.status === 204) return undefined as T;
 
-  return res.json();
+  const text = await res.text();
+  if (!text) return undefined as T;
+  return JSON.parse(text);
 }
 
 // --- Auth ---
@@ -155,6 +159,7 @@ export async function apiSearchHotels(params: {
   checkOut?: string;
   guests?: number;
   stars?: number[];
+  amenityIds?: number[];
   page?: number;
   pageSize?: number;
 }): Promise<ApiSearchResponse> {
@@ -166,6 +171,9 @@ export async function apiSearchHotels(params: {
   if (params.guests) qs.set("guests", String(params.guests));
   if (params.stars && params.stars.length > 0) {
     params.stars.forEach((s) => qs.append("stars", String(s)));
+  }
+  if (params.amenityIds && params.amenityIds.length > 0) {
+    params.amenityIds.forEach((id) => qs.append("amenityIds", String(id)));
   }
   if (params.page) qs.set("page", String(params.page));
   if (params.pageSize) qs.set("pageSize", String(params.pageSize));
@@ -264,11 +272,25 @@ export async function apiAddReservationGuest(
 }
 
 export async function apiSubmitReservation(
-  reservationId: number
+  reservationId: number,
+  paymentMethodId: number,
+  cardNumber?: string,
+  cardExpiry?: string,
+  cardCvv?: string,
+  cardHolderName?: string
 ): Promise<ApiSubmitResponse> {
   return apiFetch<ApiSubmitResponse>(
     `/reservations/${reservationId}/submit`,
-    { method: "POST" }
+    {
+      method: "POST",
+      body: JSON.stringify({
+        paymentMethodId,
+        cardNumber: cardNumber || null,
+        cardExpiry: cardExpiry || null,
+        cardCvv: cardCvv || null,
+        cardHolderName: cardHolderName || null,
+      }),
+    }
   );
 }
 
@@ -372,6 +394,36 @@ export async function apiGetInvoiceDetail(id: number): Promise<ApiInvoiceDetail>
   return apiFetch<ApiInvoiceDetail>(`/invoices/${id}`);
 }
 
+export async function apiDownloadInvoicePdf(id: number): Promise<void> {
+  const token = getToken();
+  const headers: Record<string, string> = {
+    "Accept-Language": getLocaleForHeader(),
+  };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  const res = await fetch(`${API_BASE}/invoices/${id}/pdf`, { headers });
+  if (!res.ok) {
+    throw new Error(`Failed to download PDF: ${res.status}`);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `invoice-${id}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+export async function apiGenerateInvoice(reservationId: number): Promise<ApiInvoiceDetail> {
+  return apiFetch<ApiInvoiceDetail>("/invoices/generate", {
+    method: "POST",
+    body: JSON.stringify({ reservationId }),
+  });
+}
+
 // --- Reviews ---
 
 export async function apiSubmitReview(data: {
@@ -396,11 +448,22 @@ export async function apiGetMySubscription(): Promise<ApiMySubscription> {
   return apiFetch<ApiMySubscription>("/subscriptions/me");
 }
 
-export async function apiSubscribe(subscriptionTypeId: number): Promise<ApiSubscribeResponse> {
+export async function apiSubscribe(
+  subscriptionTypeId: number,
+  paymentMethodId: number,
+  cardNumber: string,
+  cardExpiry: string,
+  cardCvv: string,
+  cardHolderName: string
+): Promise<ApiSubscribeResponse> {
   return apiFetch<ApiSubscribeResponse>("/subscriptions", {
     method: "POST",
-    body: JSON.stringify({ subscriptionTypeId }),
+    body: JSON.stringify({ subscriptionTypeId, paymentMethodId, cardNumber, cardExpiry, cardCvv, cardHolderName }),
   });
+}
+
+export async function apiCancelSubscription(): Promise<void> {
+  await apiFetch("/subscriptions/me", { method: "DELETE" });
 }
 
 // --- Cancellation policy ---
@@ -419,4 +482,19 @@ export async function apiGetCancellationPolicy(
 export async function apiGetCountries(): Promise<ApiCountry[]> {
   const res = await apiFetch<{ countries: ApiCountry[] }>("/reference/countries");
   return res.countries;
+}
+
+// --- Payment methods ---
+
+export async function apiGetPaymentMethods(): Promise<ApiPaymentMethod[]> {
+  const res = await apiFetch<{ paymentMethods: ApiPaymentMethod[] }>("/reference/payment-methods");
+  return res.paymentMethods;
+}
+
+// --- Hotel taxes ---
+
+export async function apiGetHotelTaxes(
+  hotelId: number
+): Promise<ApiHotelTax[]> {
+  return apiFetch<ApiHotelTax[]>(`/reference/taxes/${hotelId}`);
 }

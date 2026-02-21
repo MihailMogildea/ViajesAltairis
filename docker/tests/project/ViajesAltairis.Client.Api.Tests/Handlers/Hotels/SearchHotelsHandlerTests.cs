@@ -27,12 +27,15 @@ public class SearchHotelsHandlerTests
         var conn = TestDbHelper.CreateConnection();
         TestDbHelper.CreateTable(conn, "v_hotel_card", @"
             hotel_id INTEGER, hotel_name TEXT, stars INTEGER,
-            city_id INTEGER, city_name TEXT, country_id INTEGER, country_name TEXT,
+            city_id INTEGER, city_name TEXT, city_image_url TEXT,
+            country_id INTEGER, country_name TEXT,
             avg_rating REAL, review_count INTEGER, enabled INTEGER");
         TestDbHelper.CreateTable(conn, "v_hotel_room_catalog", @"
             hotel_id INTEGER, hotel_provider_room_type_id INTEGER, room_type_id INTEGER,
             room_type_name TEXT, capacity INTEGER, quantity INTEGER,
-            price_per_night REAL, currency_code TEXT, enabled INTEGER");
+            price_per_night REAL, currency_code TEXT,
+            provider_margin REAL DEFAULT 0, hotel_margin REAL DEFAULT 0,
+            enabled INTEGER");
         TestDbHelper.CreateTable(conn, "exchange_rate", @"
             id INTEGER PRIMARY KEY, currency_id INTEGER, rate_to_eur REAL,
             valid_from TEXT, valid_to TEXT");
@@ -49,9 +52,9 @@ public class SearchHotelsHandlerTests
     {
         var (conn, factory) = SetupDb();
         TestDbHelper.Execute(conn, @"
-            INSERT INTO v_hotel_card VALUES (1, 'Hotel A', 4, 1, 'Madrid', 1, 'Spain', 4.5, 10, 1);
-            INSERT INTO v_hotel_card VALUES (2, 'Hotel B', 3, 1, 'Madrid', 1, 'Spain', 3.5, 5, 1);
-            INSERT INTO v_hotel_card VALUES (3, 'Hotel C', 5, 2, 'Paris', 2, 'France', 0, 0, 0);
+            INSERT INTO v_hotel_card VALUES (1, 'Hotel A', 4, 1, 'Madrid', NULL, 1, 'Spain', 4.5, 10, 1);
+            INSERT INTO v_hotel_card VALUES (2, 'Hotel B', 3, 1, 'Madrid', NULL, 1, 'Spain', 3.5, 5, 1);
+            INSERT INTO v_hotel_card VALUES (3, 'Hotel C', 5, 2, 'Paris', NULL, 2, 'France', 0, 0, 0);
         ");
 
         var handler = CreateHandler(factory);
@@ -67,8 +70,8 @@ public class SearchHotelsHandlerTests
     {
         var (conn, factory) = SetupDb();
         TestDbHelper.Execute(conn, @"
-            INSERT INTO v_hotel_card VALUES (1, 'Hotel A', 4, 1, 'Madrid', 1, 'Spain', 4.5, 10, 1);
-            INSERT INTO v_hotel_card VALUES (2, 'Hotel B', 5, 1, 'Madrid', 1, 'Spain', 3.5, 5, 1);
+            INSERT INTO v_hotel_card VALUES (1, 'Hotel A', 4, 1, 'Madrid', NULL, 1, 'Spain', 4.5, 10, 1);
+            INSERT INTO v_hotel_card VALUES (2, 'Hotel B', 5, 1, 'Madrid', NULL, 1, 'Spain', 3.5, 5, 1);
         ");
 
         var handler = CreateHandler(factory);
@@ -84,7 +87,7 @@ public class SearchHotelsHandlerTests
     {
         var (conn, factory) = SetupDb();
         for (int i = 1; i <= 5; i++)
-            TestDbHelper.Execute(conn, $"INSERT INTO v_hotel_card VALUES ({i}, 'Hotel {i}', 4, 1, 'Madrid', 1, 'Spain', 4.0, 1, 1)");
+            TestDbHelper.Execute(conn, $"INSERT INTO v_hotel_card VALUES ({i}, 'Hotel {i}', 4, 1, 'Madrid', NULL, 1, 'Spain', 4.0, 1, 1)");
 
         var handler = CreateHandler(factory);
         var result = await handler.Handle(new SearchHotelsQuery { Page = 1, PageSize = 2 }, CancellationToken.None);

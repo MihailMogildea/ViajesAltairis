@@ -23,8 +23,8 @@ public class GetReservationByIdHandler : IRequestHandler<GetReservationByIdQuery
     public async Task<ReservationAdminDto?> Handle(GetReservationByIdQuery request, CancellationToken cancellationToken)
     {
         using var connection = _db.CreateConnection();
-        var row = await connection.QuerySingleOrDefaultAsync<ReservationAdminDto>(
-            @"SELECT
+        var partnerId = _currentUser.BusinessPartnerId;
+        var sql = @"SELECT
                 vrs.reservation_id AS Id, vrs.reservation_code AS ReservationCode,
                 vrs.status_id AS StatusId, vrs.status_name AS StatusName,
                 vrs.booked_by_user_id AS BookedByUserId,
@@ -46,8 +46,10 @@ public class GetReservationByIdHandler : IRequestHandler<GetReservationByIdQuery
                 vrs.created_at AS CreatedAt, vrs.updated_at AS UpdatedAt
               FROM v_reservation_summary vrs
               JOIN reservation r ON r.id = vrs.reservation_id
-              WHERE vrs.reservation_id = @Id",
-            new { request.Id });
+              JOIN user ub ON ub.id = r.booked_by_user_id
+              WHERE vrs.reservation_id = @Id"
+            + (partnerId.HasValue ? " AND ub.business_partner_id = @PartnerId" : "");
+        var row = await connection.QuerySingleOrDefaultAsync<ReservationAdminDto>(sql, new { request.Id, PartnerId = partnerId });
 
         if (row is null)
             return null;

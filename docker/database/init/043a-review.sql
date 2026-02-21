@@ -1,7 +1,7 @@
 CREATE TABLE review (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     reservation_id BIGINT NOT NULL,
-    user_id BIGINT NOT NULL,
+    user_id BIGINT NULL,
     hotel_id BIGINT NOT NULL,
     rating TINYINT NOT NULL,
     title VARCHAR(200) NULL,

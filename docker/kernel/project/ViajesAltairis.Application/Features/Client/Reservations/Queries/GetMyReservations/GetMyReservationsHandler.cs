@@ -33,7 +33,8 @@ public class GetMyReservationsHandler : IRequestHandler<GetMyReservationsQuery, 
                 CreatedAt = r.CreatedAt,
                 TotalAmount = r.TotalAmount,
                 Currency = r.CurrencyCode,
-                LineCount = r.LineCount
+                LineCount = r.LineCount,
+                HotelNames = r.HotelNames
             }).ToList()
         };
     }

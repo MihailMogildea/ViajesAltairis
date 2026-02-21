@@ -12,6 +12,12 @@ services:
       MYSQL_PASSWORD: ${DB_PASSWORD}
     volumes:
       - mariadb-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 60
+      start_period: 60s
     networks:
       - altairis-network
 
@@ -40,11 +46,18 @@ services:
       Jwt__SecretKey: "${JWT_SECRET}"
       ScheduledApi__BaseUrl: "http://scheduled-api:8080/"
       ReservationsApi__BaseUrl: "http://reservations-api:8080/"
+      ProvidersApi__BaseUrl: "http://providers-api:8080/"
     depends_on:
-      - database
-      - redis
-      - scheduled-api
-      - reservations-api
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      scheduled-api:
+        condition: service_started
+      reservations-api:
+        condition: service_started
+      providers-api:
+        condition: service_started
     networks:
       - altairis-network
 
@@ -64,10 +77,14 @@ services:
       ReservationsApi__BaseUrl: "http://reservations-api:8080"
       ProvidersApi__BaseUrl: "http://providers-api:8080"
     depends_on:
-      - database
-      - redis
-      - reservations-api
-      - providers-api
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      reservations-api:
+        condition: service_started
+      providers-api:
+        condition: service_started
     networks:
       - altairis-network
 
@@ -81,8 +98,10 @@ services:
       ConnectionStrings__DefaultConnection: "Server=database;Port=3306;Database=${DB_NAME};User=${DB_USER};Password=${DB_PASSWORD};CharSet=utf8mb4"
       Redis__ConnectionString: "redis:6379,password=${REDIS_PASSWORD}"
     depends_on:
-      - database
-      - redis
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_started
     networks:
       - altairis-network
 
@@ -101,9 +120,12 @@ services:
       Jwt__SecretKey: "${JWT_SECRET}"
       ReservationsApi__BaseUrl: "http://reservations-api:8080"
     depends_on:
-      - database
-      - redis
-      - reservations-api
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      reservations-api:
+        condition: service_started
     networks:
       - altairis-network
 
@@ -118,8 +140,10 @@ services:
       Redis__ConnectionString: "redis:6379,password=${REDIS_PASSWORD}"
       Encryption__Key: "${ENCRYPTION_KEY}"
     depends_on:
-      - database
-      - redis
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_started
     networks:
       - altairis-network
 
@@ -133,9 +157,14 @@ services:
       ConnectionStrings__DefaultConnection: "Server=database;Port=3306;Database=${DB_NAME};User=${DB_USER};Password=${DB_PASSWORD};CharSet=utf8mb4"
       Redis__ConnectionString: "redis:6379,password=${REDIS_PASSWORD}"
       Encryption__Key: "${ENCRYPTION_KEY}"
+      ProvidersApi__BaseUrl: "http://providers-api:8080"
     depends_on:
-      - database
-      - redis
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      providers-api:
+        condition: service_started
     networks:
       - altairis-network
 
@@ -194,10 +223,14 @@ services:
     image: prom/mysqld-exporter:v0.16.0
     platform: linux/amd64
     restart: unless-stopped
+    command:
+      - "--mysqld.address=database:3306"
+      - "--mysqld.username=${DB_USER}"
     environment:
-      DATA_SOURCE_NAME: "${DB_USER}:${DB_PASSWORD}@(database:3306)/${DB_NAME}"
+      MYSQLD_EXPORTER_PASSWORD: "${DB_PASSWORD}"
     depends_on:
-      - database
+      database:
+        condition: service_healthy
     networks:
       - altairis-network
 

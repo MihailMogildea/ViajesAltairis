@@ -138,6 +138,28 @@ public class ReservationApiClient : IReservationApiClient
         return await response.Content.ReadFromJsonAsync<ReservationLineInfoResult>(cancellationToken: cancellationToken);
     }
 
+    public async Task<InvoiceDetailResult> CreateInvoiceAsync(long reservationId, long userId, CancellationToken cancellationToken = default)
+    {
+        var client = CreateClient();
+        var payload = new { ReservationId = reservationId, UserId = userId };
+        var response = await client.PostAsJsonAsync("/api/invoices", payload, cancellationToken);
+        await EnsureSuccessOrThrowAsync(response, cancellationToken);
+        return (await response.Content.ReadFromJsonAsync<InvoiceDetailResult>(cancellationToken: cancellationToken))!;
+    }
+
+    public async Task<byte[]?> GetInvoicePdfAsync(long invoiceId, long userId, long? languageId = null, CancellationToken cancellationToken = default)
+    {
+        var client = CreateClient();
+        var url = $"/api/invoices/{invoiceId}/pdf?userId={userId}";
+        if (languageId.HasValue)
+            url += $"&languageId={languageId.Value}";
+        var response = await client.GetAsync(url, cancellationToken);
+        if (response.StatusCode == HttpStatusCode.NotFound)
+            return null;
+        await EnsureSuccessOrThrowAsync(response, cancellationToken);
+        return await response.Content.ReadAsByteArrayAsync(cancellationToken);
+    }
+
     /// <summary>
     /// Reads the error body from reservations-api and throws the appropriate exception type
     /// so that upstream middleware (ExceptionHandlerMiddleware) can map it to the correct HTTP status.

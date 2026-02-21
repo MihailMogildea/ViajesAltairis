@@ -54,12 +54,14 @@ export function UsersTable({
   users: initial,
   userTypes,
   languages,
+  utNames,
   t,
   access,
 }: {
   users: UserDto[];
   userTypes: UserTypeDto[];
   languages: LanguageDto[];
+  utNames: Record<number, string>;
   t: Record<string, string>;
   access: AccessLevel | null;
 }) {
@@ -72,7 +74,7 @@ export function UsersTable({
 
   const isFull = access === "full";
 
-  const userTypeMap = Object.fromEntries(userTypes.map((ut) => [ut.id, ut.name]));
+  const userTypeMap = Object.fromEntries(userTypes.map((ut) => [ut.id, utNames[ut.id] ?? ut.name]));
 
   function openCreate() {
     setForm(emptyForm);
@@ -255,7 +257,7 @@ export function UsersTable({
           type="select"
           value={form.userTypeId}
           onChange={(v) => setForm((f) => ({ ...f, userTypeId: Number(v) }))}
-          options={userTypes.map((ut) => ({ value: ut.id, label: ut.name }))}
+          options={userTypes.map((ut) => ({ value: ut.id, label: utNames[ut.id] ?? ut.name }))}
           required
         />
         <FormField

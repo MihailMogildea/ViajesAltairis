@@ -94,7 +94,7 @@ export function UserSubscriptionsTab({
   }));
 
   const columns: Column<UserSubscriptionDto>[] = [
-    { key: "userId", header: t["admin.field.userId"] ?? "User ID" },
+    { key: "userEmail", header: t["admin.field.userEmail"] ?? "User" },
     {
       key: "subscriptionTypeId",
       header: t["admin.field.subscriptionType"] ?? "Subscription Type",

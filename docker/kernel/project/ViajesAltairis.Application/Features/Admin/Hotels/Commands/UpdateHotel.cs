@@ -6,7 +6,7 @@ using ViajesAltairis.Application.Interfaces;
 
 namespace ViajesAltairis.Application.Features.Admin.Hotels.Commands;
 
-public record UpdateHotelCommand(long Id, long CityId, string Name, byte Stars, string Address, string? Email, string? Phone, string CheckInTime, string CheckOutTime, decimal? Latitude, decimal? Longitude, decimal Margin) : IRequest<HotelDto>, IInvalidatesCache
+public record UpdateHotelCommand(long Id, long CityId, string Name, int Stars, string Address, string? Email, string? Phone, string CheckInTime, string CheckOutTime, decimal? Latitude, decimal? Longitude, decimal Margin) : IRequest<HotelDto>, IInvalidatesCache
 {
     public static IReadOnlyList<string> CachePrefixes => ["hotel:"];
 }
@@ -28,7 +28,7 @@ public class UpdateHotelHandler : IRequestHandler<UpdateHotelCommand, HotelDto>
             ?? throw new KeyNotFoundException($"Hotel {request.Id} not found.");
         entity.CityId = request.CityId;
         entity.Name = request.Name;
-        entity.Stars = request.Stars;
+        entity.Stars = (byte)request.Stars;
         entity.Address = request.Address;
         entity.Email = request.Email;
         entity.Phone = request.Phone;
@@ -39,6 +39,6 @@ public class UpdateHotelHandler : IRequestHandler<UpdateHotelCommand, HotelDto>
         entity.Margin = request.Margin;
         await _repository.UpdateAsync(entity, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-        return new HotelDto(entity.Id, entity.CityId, entity.Name, entity.Stars, entity.Address, entity.Email, entity.Phone, entity.CheckInTime, entity.CheckOutTime, entity.Latitude, entity.Longitude, entity.Margin, entity.Enabled, entity.CreatedAt);
+        return new HotelDto { Id = entity.Id, CityId = entity.CityId, Name = entity.Name, Stars = entity.Stars, Address = entity.Address, Email = entity.Email, Phone = entity.Phone, CheckInTime = entity.CheckInTime, CheckOutTime = entity.CheckOutTime, Latitude = entity.Latitude, Longitude = entity.Longitude, Margin = entity.Margin, Enabled = entity.Enabled, CreatedAt = entity.CreatedAt };
     }
 }

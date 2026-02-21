@@ -10,6 +10,7 @@ import type { InvoiceDto, InvoiceStatusDto } from "@/types/invoice";
 interface InvoicesTabProps {
   invoices: InvoiceDto[];
   statuses: InvoiceStatusDto[];
+  isNames: Record<number, string>;
   access: AccessLevel;
   t: Record<string, string>;
 }
@@ -17,6 +18,7 @@ interface InvoicesTabProps {
 export function InvoicesTab({
   invoices: initial,
   statuses,
+  isNames,
   access,
   t,
 }: InvoicesTabProps) {
@@ -57,7 +59,7 @@ export function InvoicesTab({
       key: "statusId",
       header: t["admin.field.status"] ?? "Status",
       render: (item) => (
-        <span className="text-sm">{statusMap.get(item.statusId) ?? item.statusId}</span>
+        <span className="text-sm">{isNames[item.statusId] ?? statusMap.get(item.statusId) ?? item.statusId}</span>
       ),
     },
     {
@@ -116,7 +118,7 @@ export function InvoicesTab({
                 >
                   {statuses.map((s) => (
                     <option key={s.id} value={s.id}>
-                      {s.name}
+                      {isNames[s.id] ?? s.name}
                     </option>
                   ))}
                 </select>

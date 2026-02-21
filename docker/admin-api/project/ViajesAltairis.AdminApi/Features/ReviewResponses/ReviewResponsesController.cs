@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using ViajesAltairis.Application.Features.Admin.ReviewResponses.Commands;
+using ViajesAltairis.Application.Features.Admin.ReviewResponses.Dtos;
 using ViajesAltairis.Application.Features.Admin.ReviewResponses.Queries;
 
 namespace ViajesAltairis.AdminApi.Features.ReviewResponses;
@@ -20,6 +21,20 @@ public class ReviewResponsesController : ControllerBase
     {
         var result = await _sender.Send(new GetReviewResponseByIdQuery(id));
         return result is null ? NotFound() : Ok(result);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Create([FromBody] CreateReviewResponseRequest request)
+    {
+        var result = await _sender.Send(new CreateReviewResponseCommand(request.ReviewId, request.UserId, request.Comment));
+        return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
+    }
+
+    [HttpPut("{id:long}")]
+    public async Task<IActionResult> Update(long id, [FromBody] UpdateReviewResponseRequest request)
+    {
+        var result = await _sender.Send(new UpdateReviewResponseCommand(id, request.Comment));
+        return Ok(result);
     }
 
     [HttpDelete("{id:long}")]

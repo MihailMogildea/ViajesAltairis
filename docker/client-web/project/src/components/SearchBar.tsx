@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { getAllDestinations } from "@/data/areas";
+import { getAllDestinations, type Destination } from "@/data/areas";
 import { getDefaultCheckIn, getDefaultCheckOut } from "@/lib/utils";
 import { useLocale } from "@/context/LocaleContext";
 
@@ -27,7 +27,7 @@ export default function SearchBar({
   const [checkIn, setCheckIn] = useState(initialCheckIn || getDefaultCheckIn());
   const [checkOut, setCheckOut] = useState(initialCheckOut || getDefaultCheckOut());
   const [guests, setGuests] = useState(initialGuests);
-  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [suggestions, setSuggestions] = useState<Destination[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
@@ -46,7 +46,10 @@ export default function SearchBar({
   function handleDestinationChange(value: string) {
     setDestination(value);
     if (value.length > 0) {
-      const filtered = allDestinations.filter((d) => d.toLowerCase().includes(value.toLowerCase()));
+      const q = value.toLowerCase();
+      const filtered = allDestinations.filter(
+        (d) => d.name.toLowerCase().includes(q) || d.subtitle.toLowerCase().includes(q)
+      );
       setSuggestions(filtered.slice(0, 6));
       setShowSuggestions(true);
     } else {
@@ -86,14 +89,15 @@ export default function SearchBar({
         />
         {showSuggestions && suggestions.length > 0 && (
           <ul className="absolute z-20 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg">
-            {suggestions.map((s) => (
-              <li key={s}>
+            {suggestions.map((s, i) => (
+              <li key={`${s.name}-${i}`}>
                 <button
                   type="button"
-                  className="w-full px-4 py-2 text-left text-sm hover:bg-blue-50"
-                  onClick={() => { setDestination(s); setShowSuggestions(false); }}
+                  className="flex w-full items-center justify-between px-4 py-2 text-left text-sm hover:bg-blue-50"
+                  onClick={() => { setDestination(s.name); setShowSuggestions(false); }}
                 >
-                  {s}
+                  <span className="font-medium">{s.name}</span>
+                  <span className="ml-2 text-xs text-gray-400">{s.subtitle}</span>
                 </button>
               </li>
             ))}

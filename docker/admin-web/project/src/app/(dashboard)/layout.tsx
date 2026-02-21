@@ -22,6 +22,7 @@ export default async function DashboardLayout({
         userName={session.name}
         locale={locale}
         t={translations}
+        businessPartnerId={session.businessPartnerId}
       />
       <main className="flex-1 overflow-y-auto p-8">{children}</main>
     </div>

@@ -15,7 +15,16 @@ public record ReservationLineDto(
 
 public record GuestDto(long GuestId, string FirstName, string LastName, string? Email, string? Phone);
 
-public record ReservationSummaryDto(
-    long ReservationId, string ReservationCode, string StatusName,
-    string OwnerFirstName, string OwnerLastName, string OwnerEmail,
-    decimal TotalPrice, string CurrencyCode, int LineCount, DateTime CreatedAt);
+public class ReservationSummaryDto
+{
+    public long ReservationId { get; set; }
+    public string ReservationCode { get; set; } = string.Empty;
+    public string StatusName { get; set; } = string.Empty;
+    public string OwnerFirstName { get; set; } = string.Empty;
+    public string OwnerLastName { get; set; } = string.Empty;
+    public string OwnerEmail { get; set; } = string.Empty;
+    public decimal TotalPrice { get; set; }
+    public string CurrencyCode { get; set; } = string.Empty;
+    public int LineCount { get; set; }
+    public DateTime CreatedAt { get; set; }
+}

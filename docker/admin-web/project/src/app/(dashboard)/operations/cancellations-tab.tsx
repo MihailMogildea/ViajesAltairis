@@ -28,9 +28,9 @@ export function CancellationsTab({ cancellations: initial, t }: CancellationsTab
       render: (item) => `#${item.reservationId}`,
     },
     {
-      key: "cancelledByUserId",
+      key: "cancelledByUserEmail",
       header: t["admin.label.cancelled_by"] ?? "Cancelled By",
-      render: (item) => `User #${item.cancelledByUserId}`,
+      render: (item) => item.cancelledByUserEmail,
     },
     {
       key: "reason",

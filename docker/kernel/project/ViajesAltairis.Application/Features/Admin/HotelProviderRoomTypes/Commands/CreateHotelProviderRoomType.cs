@@ -6,7 +6,7 @@ using ViajesAltairis.Application.Interfaces;
 
 namespace ViajesAltairis.Application.Features.Admin.HotelProviderRoomTypes.Commands;
 
-public record CreateHotelProviderRoomTypeCommand(long HotelProviderId, long RoomTypeId, byte Capacity, int Quantity, decimal PricePerNight, long CurrencyId, long ExchangeRateId) : IRequest<HotelProviderRoomTypeDto>, IInvalidatesCache
+public record CreateHotelProviderRoomTypeCommand(long HotelProviderId, long RoomTypeId, int Capacity, int Quantity, decimal PricePerNight, long CurrencyId, long ExchangeRateId) : IRequest<HotelProviderRoomTypeDto>, IInvalidatesCache
 {
     public static IReadOnlyList<string> CachePrefixes => ["hotel:"];
 }
@@ -28,7 +28,7 @@ public class CreateHotelProviderRoomTypeHandler : IRequestHandler<CreateHotelPro
         {
             HotelProviderId = request.HotelProviderId,
             RoomTypeId = request.RoomTypeId,
-            Capacity = request.Capacity,
+            Capacity = (byte)request.Capacity,
             Quantity = request.Quantity,
             PricePerNight = request.PricePerNight,
             CurrencyId = request.CurrencyId,
@@ -37,6 +37,6 @@ public class CreateHotelProviderRoomTypeHandler : IRequestHandler<CreateHotelPro
         };
         await _repository.AddAsync(entity, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-        return new HotelProviderRoomTypeDto(entity.Id, entity.HotelProviderId, entity.RoomTypeId, entity.Capacity, entity.Quantity, entity.PricePerNight, entity.CurrencyId, entity.ExchangeRateId, entity.Enabled, entity.CreatedAt);
+        return new HotelProviderRoomTypeDto { Id = entity.Id, HotelProviderId = entity.HotelProviderId, RoomTypeId = entity.RoomTypeId, Capacity = entity.Capacity, Quantity = entity.Quantity, PricePerNight = entity.PricePerNight, CurrencyId = entity.CurrencyId, ExchangeRateId = entity.ExchangeRateId, Enabled = entity.Enabled, CreatedAt = entity.CreatedAt };
     }
 }

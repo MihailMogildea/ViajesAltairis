@@ -47,8 +47,8 @@ public class GetHotelDetailHandler : IRequestHandler<GetHotelDetailQuery, GetHot
                 longitude AS Longitude,
                 phone AS Phone,
                 email AS Email,
-                check_in_time AS CheckInTime,
-                check_out_time AS CheckOutTime,
+                CAST(check_in_time AS CHAR) AS CheckInTime,
+                CAST(check_out_time AS CHAR) AS CheckOutTime,
                 avg_rating AS AvgRating,
                 review_count AS ReviewCount,
                 free_cancellation_hours AS FreeCancellationHours

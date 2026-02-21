@@ -25,7 +25,7 @@ import type {
 function defaultDateRange() {
   const to = new Date();
   const from = new Date();
-  from.setDate(from.getDate() - 30);
+  from.setFullYear(from.getFullYear() - 1);
   return {
     from: from.toISOString().split("T")[0],
     to: to.toISOString().split("T")[0],
@@ -50,7 +50,7 @@ export default async function StatisticsPage() {
   }
 
   const { from, to } = defaultDateRange();
-  const qs = `?from=${from}&to=${to}`;
+  const qs = `?from=${from}&to=${to}T23:59:59`;
 
   let revenueByHotel: RevenueByHotelDto[] = [];
   let revenueByProvider: RevenueByProviderDto[] = [];
@@ -67,6 +67,14 @@ export default async function StatisticsPage() {
   let promoCodeStats: PromoCodeStatsDto[] = [];
   let subscriptionMrr: SubscriptionMrrDto[] = [];
   let error: string | null = null;
+  let apiErrors: string[] = [];
+
+  function tracked<T>(promise: Promise<T>, fallback: T, label: string): Promise<T> {
+    return promise.catch((e) => {
+      apiErrors.push(`${label}: ${e instanceof Error ? e.message : "unknown error"}`);
+      return fallback;
+    });
+  }
 
   try {
     [
@@ -85,21 +93,25 @@ export default async function StatisticsPage() {
       promoCodeStats,
       subscriptionMrr,
     ] = await Promise.all([
-      apiFetch<RevenueByHotelDto[]>(`/api/statistics/revenue/by-hotel${qs}`, { cache: "no-store" }).catch(() => [] as RevenueByHotelDto[]),
-      apiFetch<RevenueByProviderDto[]>(`/api/statistics/revenue/by-provider${qs}`, { cache: "no-store" }).catch(() => [] as RevenueByProviderDto[]),
-      apiFetch<RevenuePeriodDto[]>(`/api/statistics/revenue/by-period${qs}`, { cache: "no-store" }).catch(() => [] as RevenuePeriodDto[]),
-      apiFetch<BookingVolumeDto[]>(`/api/statistics/bookings/volume${qs}`, { cache: "no-store" }).catch(() => [] as BookingVolumeDto[]),
-      apiFetch<BookingsByStatusDto[]>(`/api/statistics/bookings/by-status${qs}`, { cache: "no-store" }).catch(() => [] as BookingsByStatusDto[]),
-      apiFetch<BookingAverageDto>(`/api/statistics/bookings/average${qs}`, { cache: "no-store" }).catch(() => null),
-      apiFetch<OccupancyDto[]>(`/api/statistics/occupancy${qs}`, { cache: "no-store" }).catch(() => [] as OccupancyDto[]),
-      apiFetch<UserGrowthDto[]>(`/api/statistics/users/growth${qs}`, { cache: "no-store" }).catch(() => [] as UserGrowthDto[]),
-      apiFetch<UsersByTypeDto[]>(`/api/statistics/users/by-type${qs}`, { cache: "no-store" }).catch(() => [] as UsersByTypeDto[]),
-      apiFetch<ActiveSubscriptionsDto>("/api/statistics/users/subscriptions", { cache: "no-store" }).catch(() => null),
-      apiFetch<ReviewStatsDto>(`/api/statistics/reviews${qs}`, { cache: "no-store" }).catch(() => null),
-      apiFetch<CancellationStatsDto>(`/api/statistics/cancellations${qs}`, { cache: "no-store" }).catch(() => null),
-      apiFetch<PromoCodeStatsDto[]>(`/api/statistics/promo-codes${qs}`, { cache: "no-store" }).catch(() => [] as PromoCodeStatsDto[]),
-      apiFetch<SubscriptionMrrDto[]>("/api/statistics/subscriptions/mrr", { cache: "no-store" }).catch(() => [] as SubscriptionMrrDto[]),
+      tracked(apiFetch<RevenueByHotelDto[]>(`/api/statistics/revenue/by-hotel${qs}`, { cache: "no-store" }), [], "revenue/by-hotel"),
+      tracked(apiFetch<RevenueByProviderDto[]>(`/api/statistics/revenue/by-provider${qs}`, { cache: "no-store" }), [], "revenue/by-provider"),
+      tracked(apiFetch<RevenuePeriodDto[]>(`/api/statistics/revenue/by-period${qs}`, { cache: "no-store" }), [], "revenue/by-period"),
+      tracked(apiFetch<BookingVolumeDto[]>(`/api/statistics/bookings/volume${qs}`, { cache: "no-store" }), [], "bookings/volume"),
+      tracked(apiFetch<BookingsByStatusDto[]>(`/api/statistics/bookings/by-status${qs}`, { cache: "no-store" }), [], "bookings/by-status"),
+      tracked(apiFetch<BookingAverageDto>(`/api/statistics/bookings/average${qs}`, { cache: "no-store" }), null, "bookings/average"),
+      tracked(apiFetch<OccupancyDto[]>(`/api/statistics/occupancy${qs}`, { cache: "no-store" }), [], "occupancy"),
+      tracked(apiFetch<UserGrowthDto[]>(`/api/statistics/users/growth${qs}`, { cache: "no-store" }), [], "users/growth"),
+      tracked(apiFetch<UsersByTypeDto[]>(`/api/statistics/users/by-type${qs}`, { cache: "no-store" }), [], "users/by-type"),
+      tracked(apiFetch<ActiveSubscriptionsDto>("/api/statistics/users/subscriptions", { cache: "no-store" }), null, "users/subscriptions"),
+      tracked(apiFetch<ReviewStatsDto>(`/api/statistics/reviews${qs}`, { cache: "no-store" }), null, "reviews"),
+      tracked(apiFetch<CancellationStatsDto>(`/api/statistics/cancellations${qs}`, { cache: "no-store" }), null, "cancellations"),
+      tracked(apiFetch<PromoCodeStatsDto[]>(`/api/statistics/promo-codes${qs}`, { cache: "no-store" }), [], "promo-codes"),
+      tracked(apiFetch<SubscriptionMrrDto[]>("/api/statistics/subscriptions/mrr", { cache: "no-store" }), [], "subscriptions/mrr"),
     ]);
+
+    if (apiErrors.length > 0) {
+      error = `Failed to load ${apiErrors.length} endpoint(s): ${apiErrors[0]}`;
+    }
   } catch (e) {
     error = e instanceof Error ? e.message : "Failed to load statistics";
   }
@@ -111,31 +123,31 @@ export default async function StatisticsPage() {
         description={t["admin.statistics.desc"] ?? "Revenue, bookings, occupancy, and user analytics."}
       />
 
-      {error ? (
-        <p className="text-sm text-red-600">{error}</p>
-      ) : (
-        <StatisticsTabs
-          initialData={{
-            revenueByHotel,
-            revenueByProvider,
-            revenueByPeriod,
-            bookingVolume,
-            bookingsByStatus,
-            bookingAverage,
-            occupancy,
-            userGrowth,
-            usersByType,
-            activeSubscriptions,
-            reviewStats,
-            cancellationStats,
-            promoCodeStats,
-            subscriptionMrr,
-          }}
-          initialFrom={from}
-          initialTo={to}
-          t={t}
-        />
+      {error && (
+        <p className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-700">{error}</p>
       )}
+
+      <StatisticsTabs
+        initialData={{
+          revenueByHotel,
+          revenueByProvider,
+          revenueByPeriod,
+          bookingVolume,
+          bookingsByStatus,
+          bookingAverage,
+          occupancy,
+          userGrowth,
+          usersByType,
+          activeSubscriptions,
+          reviewStats,
+          cancellationStats,
+          promoCodeStats,
+          subscriptionMrr,
+        }}
+        initialFrom={from}
+        initialTo={to}
+        t={t}
+      />
     </div>
   );
 }

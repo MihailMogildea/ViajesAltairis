@@ -32,7 +32,8 @@ public class SearchHotelsHandler : IRequestHandler<SearchHotelsQuery, SearchHote
     {
         var langId = _currentUserService.LanguageId;
         var currency = _currentUserService.CurrencyCode;
-        var paramsString = $"{request.CityId}:{request.CountryId}:{request.CheckIn}:{request.CheckOut}:{request.Guests}:{request.Stars}:{request.Page}:{request.PageSize}:{langId}:{currency}";
+        var amenityKey = request.AmenityIds is { Count: > 0 } ? string.Join(",", request.AmenityIds.Order()) : "";
+        var paramsString = $"{request.CityId}:{request.CountryId}:{request.CheckIn}:{request.CheckOut}:{request.Guests}:{request.Stars}:{amenityKey}:{request.Page}:{request.PageSize}:{langId}:{currency}";
         var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(paramsString)));
         var cacheKey = $"hotel:search:{hash}";
 
@@ -62,6 +63,20 @@ public class SearchHotelsHandler : IRequestHandler<SearchHotelsQuery, SearchHote
             parameters.Add("Stars", request.Stars.Value);
         }
 
+        if (request.AmenityIds is { Count: > 0 })
+        {
+            whereClauses.Add($"""
+                h.hotel_id IN (
+                    SELECT ha.hotel_id FROM hotel_amenity ha
+                    WHERE ha.amenity_id IN @AmenityIds
+                    GROUP BY ha.hotel_id
+                    HAVING COUNT(DISTINCT ha.amenity_id) = @AmenityCount
+                )
+                """);
+            parameters.Add("AmenityIds", request.AmenityIds);
+            parameters.Add("AmenityCount", request.AmenityIds.Count);
+        }
+
         var where = string.Join(" AND ", whereClauses);
         var offset = (request.Page - 1) * request.PageSize;
 
@@ -77,11 +92,12 @@ public class SearchHotelsHandler : IRequestHandler<SearchHotelsQuery, SearchHote
                 h.stars AS Stars,
                 h.city_id AS CityId,
                 h.city_name AS City,
+                h.city_image_url AS CityImageUrl,
                 h.country_id AS CountryId,
                 h.country_name AS Country,
                 h.avg_rating AS AvgRating,
                 h.review_count AS ReviewCount,
-                (SELECT MIN(rc.price_per_night * COALESCE(er.rate_to_eur, 1))
+                (SELECT MIN(rc.price_per_night * (1 + (rc.provider_margin + rc.hotel_margin) / 100) * COALESCE(er.rate_to_eur, 1))
                  FROM v_hotel_room_catalog rc
                  LEFT JOIN exchange_rate er ON er.currency_id = (
                      SELECT cur.id FROM currency cur WHERE cur.iso_code = rc.currency_code

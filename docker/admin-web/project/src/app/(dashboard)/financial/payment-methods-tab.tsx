@@ -19,6 +19,7 @@ import type { PaymentMethodDto } from "@/types/payment";
 
 interface PaymentMethodsTabProps {
   paymentMethods: PaymentMethodDto[];
+  pmNames: Record<number, string>;
   access: AccessLevel;
   t: Record<string, string>;
 }
@@ -32,6 +33,7 @@ const emptyForm: FormState = { name: "", minDaysBeforeCheckin: 0 };
 
 export function PaymentMethodsTab({
   paymentMethods: initial,
+  pmNames,
   access,
   t,
 }: PaymentMethodsTabProps) {
@@ -128,7 +130,9 @@ export function PaymentMethodsTab({
       key: "name",
       header: t["admin.field.name"] ?? "Name",
       render: (item) => (
-        <span className="font-medium text-gray-900">{item.name}</span>
+        <span className="font-medium text-gray-900">
+          {pmNames[item.id] ?? item.name}
+        </span>
       ),
     },
     {

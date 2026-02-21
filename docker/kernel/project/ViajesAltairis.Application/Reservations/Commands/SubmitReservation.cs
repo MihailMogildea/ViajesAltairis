@@ -58,7 +58,7 @@ public class SubmitReservationHandler : IRequestHandler<SubmitReservationCommand
         // Validate payment method min_days_before_checkin
         var paymentMethod = await Dapper.SqlMapper.QuerySingleOrDefaultAsync<dynamic>(
             connection,
-            "SELECT min_days_before_checkin FROM payment_method WHERE id = @Id AND enabled = 1",
+            "SELECT name, min_days_before_checkin FROM payment_method WHERE id = @Id AND enabled = 1",
             new { Id = request.PaymentMethodId });
 
         if (paymentMethod is null)
@@ -66,7 +66,7 @@ public class SubmitReservationHandler : IRequestHandler<SubmitReservationCommand
 
         var earliestCheckIn = reservation.ReservationLines.Min(l => l.CheckInDate);
         var daysUntilCheckIn = (earliestCheckIn.ToDateTime(TimeOnly.MinValue) - DateTime.UtcNow.Date).Days;
-        if (daysUntilCheckIn < (int)paymentMethod.min_days_before_checkin)
+        if (daysUntilCheckIn < Convert.ToInt32(paymentMethod.min_days_before_checkin))
             throw new InvalidOperationException(
                 $"Payment method requires at least {paymentMethod.min_days_before_checkin} days before check-in");
 
@@ -85,7 +85,7 @@ public class SubmitReservationHandler : IRequestHandler<SubmitReservationCommand
             if (validTo.Date < DateTime.UtcNow.Date)
                 throw new InvalidOperationException("Promo code has expired");
 
-            if (promo.max_uses is not null && (int)promo.current_uses >= (int)promo.max_uses)
+            if (promo.max_uses is not null && Convert.ToInt32(promo.current_uses) >= Convert.ToInt32(promo.max_uses))
                 throw new InvalidOperationException("Promo code has reached its maximum usage");
         }
 
@@ -111,6 +111,8 @@ public class SubmitReservationHandler : IRequestHandler<SubmitReservationCommand
         if (!paymentResult.Success)
             throw new InvalidOperationException($"Payment failed: {paymentResult.FailureReason}");
 
+        var isBankTransfer = (string)paymentMethod.name == "bank_transfer";
+
         // Record payment transaction
         var paymentTransaction = new PaymentTransaction
         {
@@ -120,7 +122,7 @@ public class SubmitReservationHandler : IRequestHandler<SubmitReservationCommand
             Amount = reservation.TotalPrice,
             CurrencyId = reservation.CurrencyId,
             ExchangeRateId = reservation.ExchangeRateId,
-            Status = "completed"
+            StatusId = isBankTransfer ? 1 : 2 // 1=pending, 2=completed
         };
         await _paymentTransactionRepository.AddAsync(paymentTransaction, cancellationToken);
 
@@ -131,6 +133,15 @@ public class SubmitReservationHandler : IRequestHandler<SubmitReservationCommand
                 connection,
                 "UPDATE promo_code SET current_uses = current_uses + 1 WHERE id = @Id",
                 new { Id = reservation.PromoCodeId.Value });
+        }
+
+        if (isBankTransfer)
+        {
+            // Bank transfer: stay Pending until admin confirms payment receipt
+            reservation.StatusId = (long)ReservationStatusEnum.Pending;
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            return new SubmitResult(reservation.Id, "Pending", reservation.TotalPrice, currencyCode);
         }
 
         // For each line with an external provider, create booking

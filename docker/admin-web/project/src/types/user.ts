@@ -69,6 +69,7 @@ export interface UserHotelDto {
 export interface UserSubscriptionDto {
   id: number;
   userId: number;
+  userEmail: string;
   subscriptionTypeId: number;
   startDate: string;
   endDate: string | null;

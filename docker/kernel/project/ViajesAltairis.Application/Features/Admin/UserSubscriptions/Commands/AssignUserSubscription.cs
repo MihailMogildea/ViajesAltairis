@@ -30,6 +30,6 @@ public class AssignUserSubscriptionHandler : IRequestHandler<AssignUserSubscript
         };
         await _repository.AddAsync(entity, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-        return new UserSubscriptionDto(entity.Id, entity.UserId, entity.SubscriptionTypeId, entity.StartDate, entity.EndDate, entity.Active, entity.CreatedAt, entity.UpdatedAt);
+        return new UserSubscriptionDto { Id = entity.Id, UserId = entity.UserId, SubscriptionTypeId = entity.SubscriptionTypeId, StartDate = entity.StartDate, EndDate = entity.EndDate, Active = entity.Active, CreatedAt = entity.CreatedAt, UpdatedAt = entity.UpdatedAt };
     }
 }

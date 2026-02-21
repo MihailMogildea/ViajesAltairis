@@ -18,7 +18,7 @@ public class GetProfileHandlerTests
         TestDbHelper.CreateTable(conn, "language", "id INTEGER PRIMARY KEY, iso_code TEXT");
         TestDbHelper.CreateTable(conn, "currency", "id INTEGER PRIMARY KEY, iso_code TEXT");
         TestDbHelper.CreateTable(conn, "user_subscription", "id INTEGER PRIMARY KEY, user_id INTEGER, subscription_type_id INTEGER, active INTEGER");
-        TestDbHelper.CreateTable(conn, "subscription_type", "id INTEGER PRIMARY KEY, currency_id INTEGER");
+        TestDbHelper.CreateTable(conn, "subscription_type", "id INTEGER PRIMARY KEY, name TEXT, discount REAL, currency_id INTEGER");
         TestDbHelper.Execute(conn, @"
             INSERT INTO language VALUES (1, 'en');
             INSERT INTO user VALUES (8, 'client1@example.com', 'Juan', 'Martínez', '+34 600', 'Spain', 1, 0, '2025-01-01');
@@ -47,7 +47,7 @@ public class GetProfileHandlerTests
         TestDbHelper.CreateTable(conn, "language", "id INTEGER PRIMARY KEY, iso_code TEXT");
         TestDbHelper.CreateTable(conn, "currency", "id INTEGER PRIMARY KEY, iso_code TEXT");
         TestDbHelper.CreateTable(conn, "user_subscription", "id INTEGER PRIMARY KEY, user_id INTEGER, subscription_type_id INTEGER, active INTEGER");
-        TestDbHelper.CreateTable(conn, "subscription_type", "id INTEGER PRIMARY KEY, currency_id INTEGER");
+        TestDbHelper.CreateTable(conn, "subscription_type", "id INTEGER PRIMARY KEY, name TEXT, discount REAL, currency_id INTEGER");
 
         var factory = Substitute.For<IDbConnectionFactory>();
         factory.CreateConnection().Returns(conn);

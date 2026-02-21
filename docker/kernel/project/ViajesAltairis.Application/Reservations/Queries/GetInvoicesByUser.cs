@@ -25,20 +25,20 @@ public class GetInvoicesByUserHandler : IRequestHandler<GetInvoicesByUserQuery, 
             """
             SELECT COUNT(*) FROM invoice i
             JOIN reservation r ON r.id = i.reservation_id
-            WHERE r.booked_by_user_id = @UserId
+            WHERE (r.booked_by_user_id = @UserId OR r.owner_user_id = @UserId)
             """,
             new { request.UserId });
 
         var invoices = await Dapper.SqlMapper.QueryAsync<dynamic>(
             connection,
             """
-            SELECT i.id, i.invoice_number, ins.name AS status, i.total_amount,
+            SELECT i.id, i.invoice_number, i.status_id, ins.name AS status, i.total_amount,
                    c.iso_code AS currency, i.created_at
             FROM invoice i
             JOIN reservation r ON r.id = i.reservation_id
             JOIN invoice_status ins ON ins.id = i.status_id
             JOIN currency c ON c.id = r.currency_id
-            WHERE r.booked_by_user_id = @UserId
+            WHERE (r.booked_by_user_id = @UserId OR r.owner_user_id = @UserId)
             ORDER BY i.created_at DESC
             LIMIT @PageSize OFFSET @Offset
             """,
@@ -47,6 +47,7 @@ public class GetInvoicesByUserHandler : IRequestHandler<GetInvoicesByUserQuery, 
         var summaries = invoices.Select(inv => new InvoiceSummaryResult(
             (long)inv.id,
             (string)inv.invoice_number,
+            (long)inv.status_id,
             (string)inv.status,
             (decimal)inv.total_amount,
             (string)inv.currency,

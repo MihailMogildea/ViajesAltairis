@@ -9,7 +9,7 @@ public class CreateHotelProviderRoomTypeValidator : AbstractValidator<CreateHote
     {
         RuleFor(x => x.HotelProviderId).GreaterThan(0);
         RuleFor(x => x.RoomTypeId).GreaterThan(0);
-        RuleFor(x => x.Capacity).GreaterThan((byte)0);
+        RuleFor(x => x.Capacity).GreaterThan(0);
         RuleFor(x => x.Quantity).GreaterThan(0);
         RuleFor(x => x.PricePerNight).GreaterThan(0);
         RuleFor(x => x.CurrencyId).GreaterThan(0);

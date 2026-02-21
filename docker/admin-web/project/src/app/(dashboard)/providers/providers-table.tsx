@@ -206,18 +206,24 @@ export function ProvidersTable({
         data={items}
         keyField="id"
         emptyMessage={t["admin.providers.empty"] ?? "No providers found."}
-        actions={
-          isFull
-            ? (item) => (
-                <button
-                  onClick={() => setDeleting(item)}
-                  className="rounded border border-red-300 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-50"
-                >
-                  {t["admin.action.delete"] ?? "Delete"}
-                </button>
-              )
-            : undefined
-        }
+        actions={(item) => (
+          <div className="flex gap-2">
+            <Link
+              href={`/providers/${item.id}`}
+              className="rounded border border-blue-300 px-3 py-1 text-xs font-medium text-blue-700 hover:bg-blue-50"
+            >
+              {t["admin.action.edit"] ?? "Edit"}
+            </Link>
+            {isFull && (
+              <button
+                onClick={() => setDeleting(item)}
+                className="rounded border border-red-300 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-50"
+              >
+                {t["admin.action.delete"] ?? "Delete"}
+              </button>
+            )}
+          </div>
+        )}
       />
 
       <FormModal

@@ -1,3 +1,17 @@
 namespace ViajesAltairis.Application.Features.Admin.PromoCodes.Dtos;
 
-public record PromoCodeDto(long Id, string Code, decimal? DiscountPercentage, decimal? DiscountAmount, long? CurrencyId, DateOnly ValidFrom, DateOnly ValidTo, int? MaxUses, int CurrentUses, bool Enabled, DateTime CreatedAt, DateTime UpdatedAt);
+public class PromoCodeDto
+{
+    public long Id { get; init; }
+    public string Code { get; init; } = null!;
+    public decimal? DiscountPercentage { get; init; }
+    public decimal? DiscountAmount { get; init; }
+    public long? CurrencyId { get; init; }
+    public DateOnly ValidFrom { get; init; }
+    public DateOnly ValidTo { get; init; }
+    public int? MaxUses { get; init; }
+    public int CurrentUses { get; init; }
+    public bool Enabled { get; init; }
+    public DateTime CreatedAt { get; init; }
+    public DateTime UpdatedAt { get; init; }
+}

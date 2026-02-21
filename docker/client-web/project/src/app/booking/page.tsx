@@ -1,16 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useBooking } from "@/context/BookingContext";
 import { useAuth } from "@/context/AuthContext";
 import { useLocale } from "@/context/LocaleContext";
 import { formatPrice, formatDateShort, generateReservationCode } from "@/lib/utils";
+import { apiGetPaymentMethods } from "@/lib/api";
+import type { ApiPaymentMethod } from "@/types";
 
 type Step = "review" | "payment" | "submitting";
 
 export default function BookingPage() {
-  const { items, removeItem, subtotal, promoCode, promoDiscount, total, applyPromoCode, submitBooking, clearBasket } = useBooking();
+  const { items, removeItem, subtotal, promoCode, promoDiscount, userDiscountAmount, taxEstimate, total, applyPromoCode, submitBooking, clearBasket } = useBooking();
   const { user } = useAuth();
   const { locale, currency, t } = useLocale();
   const [promoInput, setPromoInput] = useState("");
@@ -21,6 +23,30 @@ export default function BookingPage() {
   const [email, setEmail] = useState(user?.email || "");
   const [submitError, setSubmitError] = useState("");
   const [step, setStep] = useState<Step>("review");
+
+  // Payment method selection
+  const [paymentMethods, setPaymentMethods] = useState<ApiPaymentMethod[]>([]);
+  const [selectedMethodId, setSelectedMethodId] = useState<number>(1); // default visa
+
+  useEffect(() => {
+    apiGetPaymentMethods()
+      .then((methods) => {
+        setPaymentMethods(methods);
+        if (methods.length > 0) setSelectedMethodId(methods[0].id);
+      })
+      .catch(() => {});
+  }, [locale]);
+
+  const selectedMethod = paymentMethods.find((m) => m.id === selectedMethodId);
+  const isBankTransfer = selectedMethod?.code === "bank_transfer";
+
+  // Compute earliest check-in to determine bank transfer eligibility
+  const earliestCheckIn = items.length > 0
+    ? items.reduce((earliest, item) => (item.check_in < earliest ? item.check_in : earliest), items[0].check_in)
+    : "";
+  const daysUntilCheckIn = earliestCheckIn
+    ? Math.floor((new Date(earliestCheckIn).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+    : 0;
 
   // Payment form fields (placeholder — no real processing)
   const [cardNumber, setCardNumber] = useState("");
@@ -51,16 +77,24 @@ export default function BookingPage() {
     setStep("submitting");
 
     try {
-      const result = await submitBooking(firstName, lastName, email);
+      const result = await submitBooking(
+        currency.code, firstName, lastName, email, selectedMethodId,
+        isBankTransfer ? undefined : cardNumber,
+        isBankTransfer ? undefined : cardExpiry,
+        isBankTransfer ? undefined : cardCvc,
+        isBankTransfer ? undefined : cardName
+      );
 
       const params = new URLSearchParams();
       if (result) {
         params.set("code", `VA-${result.reservationId}`);
         params.set("total", result.totalAmount.toFixed(2));
+        params.set("status", result.status);
       } else {
         // API unavailable — fall back to client-side confirmation
         params.set("code", generateReservationCode());
         params.set("total", total.toFixed(2));
+        params.set("status", "Confirmed");
       }
       params.set("items", String(items.length));
       // Build URL first, then clear basket to avoid race condition
@@ -73,7 +107,7 @@ export default function BookingPage() {
     }
   }
 
-  const fp = (amount: number) => formatPrice(amount, currency.code, locale);
+  const fp = (amount: number) => formatPrice(amount, currency.code, locale, currency.exchangeRateToEur);
 
   // Empty basket
   if (items.length === 0) {
@@ -133,6 +167,18 @@ export default function BookingPage() {
               <span>-{fp(promoDiscount)}</span>
             </div>
           )}
+          {userDiscountAmount > 0 && (
+            <div className="flex justify-between text-green-600">
+              <span>{t("client.booking.member_discount")}</span>
+              <span>-{fp(userDiscountAmount)}</span>
+            </div>
+          )}
+          {taxEstimate > 0 && (
+            <div className="flex justify-between text-gray-600">
+              <span>{t("client.booking.tax")}</span>
+              <span>{fp(taxEstimate)}</span>
+            </div>
+          )}
           <div className="border-t border-gray-100 pt-2">
             <div className="flex justify-between text-lg font-bold text-gray-900">
               <span>{t("client.booking.total")}</span>
@@ -154,9 +200,15 @@ export default function BookingPage() {
           <button
             type="submit"
             form="payment-form"
-            className="mt-4 w-full rounded-lg bg-green-600 py-2.5 text-sm font-semibold text-white hover:bg-green-700 transition-colors"
+            className={`mt-4 w-full rounded-lg py-2.5 text-sm font-semibold text-white transition-colors ${
+              isBankTransfer
+                ? "bg-amber-600 hover:bg-amber-700"
+                : "bg-green-600 hover:bg-green-700"
+            }`}
           >
-            {t("client.booking.pay")} {fp(total)}
+            {isBankTransfer
+              ? t("client.booking.confirm_bank_transfer")
+              : `${t("client.booking.pay")} ${fp(total)}`}
           </button>
         )}
         {step === "submitting" && (
@@ -278,66 +330,112 @@ export default function BookingPage() {
 
           {(step === "payment" || step === "submitting") && (
             <>
-              {/* Payment form */}
-              <form id="payment-form" onSubmit={handleConfirmPayment} className="rounded-xl border border-gray-200 p-5">
+              {/* Payment method selector */}
+              <div className="rounded-xl border border-gray-200 p-5">
                 <h3 className="mb-4 text-lg font-semibold text-gray-900">{t("client.booking.payment_title")}</h3>
-                <p className="mb-4 text-xs text-gray-400">
-                  {t("client.booking.payment_secure")}
-                </p>
-                <div className="space-y-3">
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-gray-700">{t("client.booking.name_on_card")}</label>
-                    <input
-                      type="text" required value={cardName} onChange={(e) => setCardName(e.target.value)}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      placeholder="John Doe"
-                    />
+
+                {paymentMethods.length > 0 && (
+                  <div className="mb-4 flex flex-wrap gap-2">
+                    {paymentMethods.map((method) => {
+                      const disabled = method.code === "bank_transfer" && daysUntilCheckIn < method.minDaysBeforeCheckin;
+                      const selected = selectedMethodId === method.id;
+                      return (
+                        <button
+                          key={method.id}
+                          type="button"
+                          disabled={disabled}
+                          onClick={() => setSelectedMethodId(method.id)}
+                          className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
+                            selected
+                              ? "border-blue-500 bg-blue-50 text-blue-700"
+                              : disabled
+                                ? "border-gray-200 bg-gray-50 text-gray-300 cursor-not-allowed"
+                                : "border-gray-300 text-gray-700 hover:bg-gray-50"
+                          }`}
+                          title={disabled ? t("client.booking.bank_transfer_min_days").replace("{days}", String(method.minDaysBeforeCheckin)) : undefined}
+                        >
+                          {method.name}
+                        </button>
+                      );
+                    })}
                   </div>
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-gray-700">{t("client.booking.card_number")}</label>
-                    <input
-                      type="text" required value={cardNumber}
-                      onChange={(e) => {
-                        const v = e.target.value.replace(/\D/g, "").slice(0, 16);
-                        setCardNumber(v.replace(/(\d{4})(?=\d)/g, "$1 ").trim());
-                      }}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm font-mono focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      placeholder="1234 5678 9012 3456"
-                      maxLength={19}
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="mb-1 block text-sm font-medium text-gray-700">{t("client.booking.expiry")}</label>
-                      <input
-                        type="text" required value={cardExpiry}
-                        onChange={(e) => {
-                          let v = e.target.value.replace(/\D/g, "").slice(0, 4);
-                          if (v.length > 2) v = v.slice(0, 2) + "/" + v.slice(2);
-                          setCardExpiry(v);
-                        }}
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm font-mono focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        placeholder="MM/YY"
-                        maxLength={5}
-                      />
+                )}
+
+                {/* Bank transfer — details shown on confirmation page after submit */}
+                {isBankTransfer ? (
+                  <form id="payment-form" onSubmit={handleConfirmPayment}>
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+                      <p className="text-sm font-medium text-amber-800">
+                        {t("client.booking.bank_transfer_confirm_note")}
+                      </p>
                     </div>
-                    <div>
-                      <label className="mb-1 block text-sm font-medium text-gray-700">{t("client.booking.cvc")}</label>
-                      <input
-                        type="text" required value={cardCvc}
-                        onChange={(e) => setCardCvc(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm font-mono focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        placeholder="123"
-                        maxLength={4}
-                      />
+                    {submitError && <p className="mt-3 text-sm text-red-600">{submitError}</p>}
+                    <p className="mt-4 text-xs text-gray-400">
+                      {t("client.booking.demo_disclaimer")}
+                    </p>
+                  </form>
+                ) : (
+                  /* Card payment form */
+                  <form id="payment-form" onSubmit={handleConfirmPayment}>
+                    <p className="mb-4 text-xs text-gray-400">
+                      {t("client.booking.payment_secure")}
+                    </p>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-gray-700">{t("client.booking.name_on_card")}</label>
+                        <input
+                          type="text" required value={cardName} onChange={(e) => setCardName(e.target.value)}
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          placeholder="John Doe"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-gray-700">{t("client.booking.card_number")}</label>
+                        <input
+                          type="text" required value={cardNumber}
+                          onChange={(e) => {
+                            const v = e.target.value.replace(/\D/g, "").slice(0, 16);
+                            setCardNumber(v.replace(/(\d{4})(?=\d)/g, "$1 ").trim());
+                          }}
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm font-mono focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          placeholder="1234 5678 9012 3456"
+                          maxLength={19}
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="mb-1 block text-sm font-medium text-gray-700">{t("client.booking.expiry")}</label>
+                          <input
+                            type="text" required value={cardExpiry}
+                            onChange={(e) => {
+                              let v = e.target.value.replace(/\D/g, "").slice(0, 4);
+                              if (v.length > 2) v = v.slice(0, 2) + "/" + v.slice(2);
+                              setCardExpiry(v);
+                            }}
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm font-mono focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            placeholder="MM/YY"
+                            maxLength={5}
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-sm font-medium text-gray-700">{t("client.booking.cvc")}</label>
+                          <input
+                            type="text" required value={cardCvc}
+                            onChange={(e) => setCardCvc(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm font-mono focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            placeholder="123"
+                            maxLength={4}
+                          />
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-                {submitError && <p className="mt-3 text-sm text-red-600">{submitError}</p>}
-                <p className="mt-4 text-xs text-gray-400">
-                  {t("client.booking.demo_disclaimer")}
-                </p>
-              </form>
+                    {submitError && <p className="mt-3 text-sm text-red-600">{submitError}</p>}
+                    <p className="mt-4 text-xs text-gray-400">
+                      {t("client.booking.demo_disclaimer")}
+                    </p>
+                  </form>
+                )}
+              </div>
 
               <button
                 type="button"

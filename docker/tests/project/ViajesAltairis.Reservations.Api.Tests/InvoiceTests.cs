@@ -18,8 +18,8 @@ public class InvoiceTests : IntegrationTestBase
         helper.EnqueueScalar(1);
         // List
         helper.EnqueueMultiRow(
-            ["id", "invoice_number", "status", "total_amount", "currency", "created_at"],
-            new object[] { (long)1, "INV-2024-001", "Issued", 400m, "EUR", DateTime.UtcNow });
+            ["id", "invoice_number", "status_id", "status", "total_amount", "currency", "created_at"],
+            new object[] { (long)1, "INV-2024-001", (long)2, "Issued", 400m, "EUR", DateTime.UtcNow });
         Factory.SetupDapperConnection(helper);
 
         var response = await GetAsync("/api/invoices?userId=1&page=1&pageSize=20");
@@ -37,7 +37,7 @@ public class InvoiceTests : IntegrationTestBase
         var helper = new DapperMockHelper();
         helper.EnqueueSingleRow(
             ("id", (long)1), ("invoice_number", "INV-2024-001"),
-            ("status", "Issued"), ("subtotal", 360m),
+            ("status_id", (long)2), ("status", "Issued"), ("subtotal", 360m),
             ("tax_amount", 40m), ("total_amount", 400m),
             ("currency", "EUR"), ("exchange_rate_to_eur", 1.0m),
             ("created_at", DateTime.UtcNow),
@@ -58,7 +58,7 @@ public class InvoiceTests : IntegrationTestBase
     public async Task GetInvoiceById_WrongUser_Returns404()
     {
         var helper = new DapperMockHelper();
-        helper.EnqueueEmptyQuery("id", "invoice_number", "status", "subtotal",
+        helper.EnqueueEmptyQuery("id", "invoice_number", "status_id", "status", "subtotal",
             "tax_amount", "total_amount", "currency", "exchange_rate_to_eur",
             "created_at", "updated_at", "reservation_id");
         Factory.SetupDapperConnection(helper);

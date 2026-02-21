@@ -124,7 +124,8 @@ public class SqliteTestDatabase : IDbConnectionFactory, IDisposable
 
             CREATE TABLE provider (
                 id INTEGER PRIMARY KEY,
-                name TEXT NOT NULL
+                name TEXT NOT NULL,
+                margin REAL NOT NULL DEFAULT 0
             );
 
             CREATE TABLE hotel_provider (
@@ -433,6 +434,8 @@ public class SqliteTestDatabase : IDbConnectionFactory, IDisposable
                 hprt.capacity,
                 hprt.quantity,
                 hprt.price_per_night,
+                p.margin          AS provider_margin,
+                h.margin          AS hotel_margin,
                 cur.iso_code      AS currency_code,
                 hprt.enabled
             FROM hotel_provider_room_type hprt

@@ -181,6 +181,7 @@ export interface Reservation {
   promo_code?: string;
   created_at: string;
   lines: ReservationLine[];
+  hotel_names?: string;
 }
 
 export interface ReservationLine {
@@ -233,6 +234,12 @@ export interface PaginationState {
   total: number;
 }
 
+export interface BasketItemTax {
+  taxTypeName: string;
+  rate: number;
+  isPercentage: boolean;
+}
+
 export interface BasketItem {
   id: string;
   hotel_id: number;
@@ -250,6 +257,7 @@ export interface BasketItem {
   board_supplement: number;
   nights: number;
   line_total: number;
+  taxes?: BasketItemTax[];
 }
 
 // --- API response types (match client-api DTOs) ---
@@ -263,7 +271,10 @@ export interface ApiHotelSummary {
   id: number;
   name: string;
   stars: number;
+  cityId: number;
   city: string;
+  cityImageUrl: string | null;
+  countryId: number;
   country: string;
   priceFrom: number | null;
   mainImageUrl: string | null;
@@ -293,9 +304,12 @@ export interface ApiHotelDetail {
 
 export interface ApiRoomAvailability {
   roomTypeId: number;
+  roomTypeDbId: number;
   roomTypeName: string;
+  basePricePerNight: number;
   maxGuests: number;
   availableRooms: number;
+  images: string[];
   boardOptions: ApiBoardOption[];
 }
 
@@ -328,6 +342,7 @@ export interface ApiReservationSummary {
   totalAmount: number;
   currency: string;
   lineCount: number;
+  hotelNames: string | null;
 }
 
 export interface ApiReservationDetail {
@@ -379,6 +394,8 @@ export interface ApiProfileResponse {
   preferredLanguage: string;
   preferredCurrency: string;
   discount: number;
+  subscriptionType?: string;
+  subscriptionDiscount?: number;
   createdAt: string;
 }
 
@@ -399,6 +416,7 @@ export interface ApiUpdateProfileRequest {
 export interface ApiInvoiceSummary {
   id: number;
   invoiceNumber: string;
+  statusId: number;
   status: string;
   totalAmount: number;
   currency: string;
@@ -442,6 +460,7 @@ export interface ApiSubscribeResponse {
   subscriptionId: number;
   startDate: string;
   endDate: string;
+  paymentReference?: string;
 }
 
 export interface ApiCancellationPolicy {
@@ -453,4 +472,17 @@ export interface ApiCountry {
   id: number;
   code: string;
   name: string;
+}
+
+export interface ApiHotelTax {
+  taxTypeName: string;
+  rate: number;
+  isPercentage: boolean;
+}
+
+export interface ApiPaymentMethod {
+  id: number;
+  code: string;
+  name: string;
+  minDaysBeforeCheckin: number;
 }

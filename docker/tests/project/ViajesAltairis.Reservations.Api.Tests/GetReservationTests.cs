@@ -17,6 +17,7 @@ public class GetReservationTests : IntegrationTestBase
         // Main reservation query
         helper.EnqueueSingleRow(
             ("id", (long)1), ("booked_by_user_id", (long)1),
+            ("owner_user_id", (object)DBNull.Value),
             ("status", "Confirmed"), ("created_at", DateTime.UtcNow),
             ("total_price", 400m), ("discount_amount", 20m),
             ("currency_code", "EUR"), ("exchange_rate", 1.0m),
@@ -25,8 +26,8 @@ public class GetReservationTests : IntegrationTestBase
         helper.EnqueueMultiRow(
             ["id", "hotel_name", "room_type", "board_type", "check_in", "check_out", "guest_count", "line_total"],
             new object[] { (long)10, "Hotel Test", "Double", "Half Board",
-                DateOnly.FromDateTime(DateTime.UtcNow.AddDays(30)),
-                DateOnly.FromDateTime(DateTime.UtcNow.AddDays(33)),
+                DateTime.UtcNow.AddDays(30),
+                DateTime.UtcNow.AddDays(33),
                 2, 400m });
         // Guests for line 10
         helper.EnqueueMultiRow(
@@ -49,7 +50,7 @@ public class GetReservationTests : IntegrationTestBase
     public async Task GetById_NotFound_Returns404()
     {
         var helper = new DapperMockHelper();
-        helper.EnqueueEmptyQuery("id", "booked_by_user_id", "status", "created_at",
+        helper.EnqueueEmptyQuery("id", "booked_by_user_id", "owner_user_id", "status", "created_at",
             "total_price", "discount_amount", "currency_code", "exchange_rate", "promo_code");
         Factory.SetupDapperConnection(helper);
 

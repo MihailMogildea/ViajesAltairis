@@ -1,13 +1,16 @@
 namespace ViajesAltairis.Application.Features.Admin.Reviews.Dtos;
 
-public record ReviewDto(
-    long Id,
-    long ReservationId,
-    long UserId,
-    long HotelId,
-    byte Rating,
-    string? Title,
-    string? Comment,
-    bool Visible,
-    DateTime CreatedAt,
-    DateTime UpdatedAt);
+public class ReviewDto
+{
+    public long Id { get; init; }
+    public long ReservationId { get; init; }
+    public long UserId { get; init; }
+    public string UserEmail { get; init; } = null!;
+    public long HotelId { get; init; }
+    public int Rating { get; init; }
+    public string? Title { get; init; }
+    public string? Comment { get; init; }
+    public bool Visible { get; init; }
+    public DateTime CreatedAt { get; init; }
+    public DateTime UpdatedAt { get; init; }
+}

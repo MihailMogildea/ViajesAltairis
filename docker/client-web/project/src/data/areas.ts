@@ -62,12 +62,17 @@ export function getRegionForCity(cityId: number): Region | undefined {
   return regions.find((r) => r.cities.some((c) => c.id === cityId));
 }
 
-export function getAllDestinations(): string[] {
-  const destinations: string[] = [];
+export interface Destination {
+  name: string;
+  subtitle: string;
+}
+
+export function getAllDestinations(): Destination[] {
+  const destinations: Destination[] = [];
   for (const region of regions) {
-    destinations.push(region.name);
+    destinations.push({ name: region.name, subtitle: region.country });
     for (const city of region.cities) {
-      destinations.push(city.name);
+      destinations.push({ name: city.name, subtitle: `${region.name}, ${region.country}` });
     }
   }
   return destinations;

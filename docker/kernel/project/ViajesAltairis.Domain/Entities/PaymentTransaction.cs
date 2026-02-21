@@ -8,7 +8,7 @@ public class PaymentTransaction : AuditableEntity
     public decimal Amount { get; set; }
     public long CurrencyId { get; set; }
     public long ExchangeRateId { get; set; }
-    public string Status { get; set; } = null!;
+    public long StatusId { get; set; }
 
     public Reservation Reservation { get; set; } = null!;
     public PaymentMethod PaymentMethod { get; set; } = null!;

@@ -44,9 +44,9 @@ public class GetMySubscriptionHandler : IRequestHandler<GetMySubscriptionQuery, 
         if (subscription == null)
             return new GetMySubscriptionResponse { IsActive = false };
 
-        var langId = _currentUser.LanguageId;
-        if (langId != 1 && subscription.SubscriptionTypeId.HasValue)
+        if (subscription.SubscriptionTypeId.HasValue)
         {
+            var langId = _currentUser.LanguageId;
             var names = await _translationService.ResolveAsync(
                 "subscription_type", new[] { subscription.SubscriptionTypeId.Value }, langId, "name", cancellationToken);
             if (names.TryGetValue(subscription.SubscriptionTypeId.Value, out var n))

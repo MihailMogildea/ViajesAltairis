@@ -9,7 +9,22 @@ const ROOM_TYPE_NAMES: Record<number, string> = {
   6: "Deluxe",
 };
 
-function boards(star: 3 | 4 | 5, roomTypeId: number, hprtId: number): BoardOption[] {
+// Provider margin by hotel ID (provider_margin + hotel_margin)
+// Hotels 1-12: Mallorca 15%, Hotels 13-14: Menorca 15%, Hotels 15-16: Ibiza 15%
+// Hotels 17-19: Peninsula 12%, Hotels 20-22: France 10%
+function marginFactor(hotelId: number): number {
+  if (hotelId <= 12) return 1.15;
+  if (hotelId <= 14) return 1.15;
+  if (hotelId <= 16) return 1.15;
+  if (hotelId <= 19) return 1.12;
+  return 1.10;
+}
+
+function applyMargin(price: number, hotelId: number): number {
+  return Math.round(price * marginFactor(hotelId) * 100) / 100;
+}
+
+function boards(star: 3 | 4 | 5, roomTypeId: number, hprtId: number, hotelId: number): BoardOption[] {
   // 3-star: room_only, B&B, half_board
   // 4-star: room_only, B&B, half_board, full_board
   // 5-star: all five
@@ -19,7 +34,7 @@ function boards(star: 3 | 4 | 5, roomTypeId: number, hprtId: number): BoardOptio
   const supplements = boardPricing[hprtId];
   if (!supplements) return base;
   for (const s of supplements) {
-    base.push(s);
+    base.push({ ...s, price_supplement: applyMargin(s.price_supplement, hotelId) });
   }
   return base;
 }
@@ -150,13 +165,13 @@ addBoards(68, [[2,"Bed & Breakfast","bed_and_breakfast",20],[3,"Half Board","hal
 addBoards(69, [[2,"Bed & Breakfast","bed_and_breakfast",24],[3,"Half Board","half_board",48],[4,"Full Board","full_board",68]]);
 
 function img(hotelName: string, roomType: string, n: number, roomId: number): RoomImage {
-  const text = encodeURIComponent(`${roomType} - ${hotelName}`);
-  return { id: roomId * 10 + n, room_config_id: roomId, url: `https://placehold.co/800x500/E8E0D8/6B5B4F?text=${text}`, alt_text: `${roomType} at ${hotelName}`, sort_order: n };
+  return { id: roomId * 10 + n, room_config_id: roomId, url: `https://picsum.photos/seed/room-${roomId}-${n}/800/600`, alt_text: `${roomType} at ${hotelName}`, sort_order: n };
 }
 
 function makeRoom(id: number, hotelId: number, roomTypeId: number, capacity: number, quantity: number, price: number, hotelName: string): RoomConfig {
   const typeName = ROOM_TYPE_NAMES[roomTypeId];
   const numImages = (roomTypeId === 4 || roomTypeId === 6) ? 3 : 2;
+  const stars = [5, 3, 4, 3, 4, 5, 4, 3, 4, 5, 4, 4, 4, 3, 5, 4, 5, 3, 4, 5, 3, 4][hotelId - 1] as 3 | 4 | 5;
   return {
     id,
     hotel_id: hotelId,
@@ -164,14 +179,11 @@ function makeRoom(id: number, hotelId: number, roomTypeId: number, capacity: num
     room_type_name: typeName,
     capacity,
     quantity,
-    base_price_per_night: price,
+    base_price_per_night: applyMargin(price, hotelId),
     currency_code: "EUR",
     images: Array.from({ length: numImages }, (_, i) => img(hotelName, typeName, i + 1, id)),
     amenities: [],
-    board_options: [
-      { board_type_id: 1, board_type_name: "Room Only", board_type_code: "room_only", price_supplement: 0 },
-      ...(boardPricing[id] || []),
-    ],
+    board_options: boards(stars, roomTypeId, id, hotelId),
   };
 }
 

@@ -10,6 +10,7 @@ SELECT
     h.stars,
     c.id              AS city_id,
     c.name            AS city_name,
+    c.image_url       AS city_image_url,
     ad.id             AS admin_division_id,
     ad.name           AS admin_division_name,
     co.id             AS country_id,
@@ -29,7 +30,7 @@ LEFT JOIN cancellation_policy cp ON cp.id = (
     ORDER BY cp2.id LIMIT 1
 )
 GROUP BY h.id, h.name, h.stars,
-         c.id, c.name,
+         c.id, c.name, c.image_url,
          ad.id, ad.name,
          co.id, co.name,
          cp.free_cancellation_hours,
@@ -92,6 +93,8 @@ SELECT
     hprt.capacity,
     hprt.quantity,
     hprt.price_per_night,
+    p.margin          AS provider_margin,
+    h.margin          AS hotel_margin,
     cur.iso_code      AS currency_code,
     hprt.enabled
 FROM hotel_provider_room_type hprt

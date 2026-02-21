@@ -3,18 +3,15 @@ import { getAmenitiesForHotel } from "./amenities";
 import { getAverageRating, getReviewsForHotel } from "./reviews";
 import { getRoomsForHotel } from "./rooms";
 
-function img(name: string, n: number, color: string): { id: number; hotel_id: number; url: string; alt_text: string; sort_order: number } {
-  const text = encodeURIComponent(name);
-  return { id: n, hotel_id: 0, url: `https://placehold.co/800x500/${color}/FFFFFF?text=${text}`, alt_text: name, sort_order: n };
-}
-
-function hotelImages(id: number, name: string, stars: number): Hotel["images"] {
-  const colors = ["2563EB", "0891B2", "059669", "7C3AED", "DC2626", "D97706"];
+function hotelImages(id: number, _name: string, stars: number): Hotel["images"] {
   const count = stars === 5 ? 4 : stars === 4 ? 3 : 2;
+  const themes = ["exterior", "lobby", "pool", "spa"];
   return Array.from({ length: count }, (_, i) => ({
-    ...img(name, i + 1, colors[i % colors.length]),
     id: id * 10 + i,
     hotel_id: id,
+    url: `https://picsum.photos/seed/hotel-${id}-${themes[i] || i + 1}/800/600`,
+    alt_text: `Hotel ${id} - ${themes[i] || `image ${i + 1}`}`,
+    sort_order: i + 1,
   }));
 }
 

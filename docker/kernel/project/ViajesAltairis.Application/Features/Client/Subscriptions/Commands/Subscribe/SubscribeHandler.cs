@@ -9,27 +9,50 @@ public class SubscribeHandler : IRequestHandler<SubscribeCommand, SubscribeRespo
 {
     private readonly ICurrentUserService _currentUser;
     private readonly IDbConnectionFactory _connectionFactory;
+    private readonly IPaymentService _paymentService;
 
-    public SubscribeHandler(ICurrentUserService currentUser, IDbConnectionFactory connectionFactory)
+    public SubscribeHandler(ICurrentUserService currentUser, IDbConnectionFactory connectionFactory, IPaymentService paymentService)
     {
         _currentUser = currentUser;
         _connectionFactory = connectionFactory;
+        _paymentService = paymentService;
     }
 
     public async Task<SubscribeResponse> Handle(SubscribeCommand request, CancellationToken cancellationToken)
     {
         using var connection = _connectionFactory.CreateConnection();
         connection.Open();
-        using var transaction = connection.BeginTransaction();
 
         var userId = _currentUser.UserId!.Value;
 
         var subType = await connection.QuerySingleOrDefaultAsync<dynamic>(
-            "SELECT id, name FROM subscription_type WHERE id = @Id AND enabled = TRUE",
-            new { Id = request.SubscriptionTypeId }, transaction);
+            "SELECT id, name, price_per_month, currency_id FROM subscription_type WHERE id = @Id AND enabled = TRUE",
+            new { Id = request.SubscriptionTypeId });
 
         if (subType == null)
             throw new KeyNotFoundException("Subscription plan not found.");
+
+        var currencyCode = await connection.ExecuteScalarAsync<string>(
+            "SELECT iso_code FROM currency WHERE id = @Id",
+            new { Id = (long)subType.currency_id });
+
+        // Process payment
+        var paymentRequest = new PaymentRequest(
+            ReservationId: 0,
+            PaymentMethodId: request.PaymentMethodId,
+            Amount: (decimal)subType.price_per_month,
+            CurrencyCode: currencyCode!,
+            CardNumber: request.CardNumber,
+            CardExpiry: request.CardExpiry,
+            CardCvv: request.CardCvv,
+            CardHolderName: request.CardHolderName);
+
+        var paymentResult = await _paymentService.ProcessPaymentAsync(paymentRequest, cancellationToken);
+
+        if (!paymentResult.Success)
+            throw new InvalidOperationException(paymentResult.FailureReason ?? "Payment failed.");
+
+        using var transaction = connection.BeginTransaction();
 
         var now = DateTime.UtcNow;
         var today = DateOnly.FromDateTime(now);
@@ -60,7 +83,8 @@ public class SubscribeHandler : IRequestHandler<SubscribeCommand, SubscribeRespo
         {
             SubscriptionId = newId,
             StartDate = startDate.ToDateTime(TimeOnly.MinValue),
-            EndDate = endDate.ToDateTime(TimeOnly.MinValue)
+            EndDate = endDate.ToDateTime(TimeOnly.MinValue),
+            PaymentReference = paymentResult.PaymentReference
         };
     }
 }

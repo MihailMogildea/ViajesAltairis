@@ -5,7 +5,7 @@ import { USER_TYPE_ID, sectionFromPath, canAccess } from "./lib/permissions";
 import { COOKIE_NAME } from "./lib/auth";
 
 /** Routes that don't require authentication. */
-const PUBLIC_PATHS = ["/login", "/unauthorized"];
+const PUBLIC_PATHS = ["/login", "/unauthorized", "/api/metrics"];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -27,7 +27,7 @@ export function middleware(request: NextRequest) {
 
   // Decode JWT (no verification — admin-api handles that on API calls)
   try {
-    const payload = decodeJwt(token) as { user_type_id?: string; exp?: number };
+    const payload = decodeJwt(token) as { user_type_id?: string; business_partner_id?: string; exp?: number };
 
     // Expired?
     if (payload.exp && payload.exp * 1000 < Date.now()) {
@@ -47,8 +47,9 @@ export function middleware(request: NextRequest) {
     }
 
     // Check section access
+    const businessPartnerId = payload.business_partner_id ? Number(payload.business_partner_id) : null;
     const section = sectionFromPath(pathname);
-    if (section && !canAccess(role, section)) {
+    if (section && !canAccess(role, section, businessPartnerId)) {
       return NextResponse.redirect(new URL("/unauthorized", request.url));
     }
   } catch {
@@ -62,5 +63,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|logo.jpg).*)"],
 };

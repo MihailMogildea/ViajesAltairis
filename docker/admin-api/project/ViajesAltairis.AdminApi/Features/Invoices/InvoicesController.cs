@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using ViajesAltairis.Application.Features.Admin.Billing.Queries;
 using ViajesAltairis.Application.Features.Admin.Invoices.Commands;
 using ViajesAltairis.Application.Features.Admin.Invoices.Dtos;
 using ViajesAltairis.Application.Features.Admin.Invoices.Queries;
@@ -28,5 +29,12 @@ public class InvoicesController : ControllerBase
     {
         await _sender.Send(new SetInvoiceStatusCommand(id, request.StatusId));
         return NoContent();
+    }
+
+    [HttpGet("billing-export")]
+    public async Task<IActionResult> BillingExport([FromQuery] DateTime from, [FromQuery] DateTime to, [FromQuery] string channel)
+    {
+        var result = await _sender.Send(new ExportBillingZipQuery(from, to, channel));
+        return File(result.ZipBytes, "application/zip", result.FileName);
     }
 }

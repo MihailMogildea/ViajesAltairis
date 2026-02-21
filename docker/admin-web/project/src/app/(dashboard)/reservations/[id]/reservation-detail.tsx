@@ -13,6 +13,7 @@ import {
   addLine,
   removeLine,
   addGuest,
+  fetchReservation,
   fetchReservationLines,
   fetchReservationGuests,
 } from "../actions";
@@ -29,6 +30,7 @@ import type {
   RoomConfigOption,
   BoardOption,
   PaymentMethodOption,
+  ProviderOption,
   HotelProviderOption,
   RoomTypeOption,
   BoardTypeOption,
@@ -93,9 +95,14 @@ export function ReservationDetail({
   roomConfigs,
   boardOptions,
   paymentMethods,
+  providers,
   hotelProviders,
   roomTypes,
   boardTypes,
+  pmNames,
+  rsNames,
+  rtNames,
+  btNames,
   access,
   t,
 }: {
@@ -107,9 +114,14 @@ export function ReservationDetail({
   roomConfigs: RoomConfigOption[];
   boardOptions: BoardOption[];
   paymentMethods: PaymentMethodOption[];
+  providers: ProviderOption[];
   hotelProviders: HotelProviderOption[];
   roomTypes: RoomTypeOption[];
   boardTypes: BoardTypeOption[];
+  pmNames: Record<number, string>;
+  rsNames: Record<number, string>;
+  rtNames: Record<number, string>;
+  btNames: Record<number, string>;
   access: string | null;
   t: Record<string, string>;
 }) {
@@ -141,8 +153,27 @@ export function ReservationDetail({
   const isDraft = reservation.statusName.toLowerCase().includes("draft");
 
   // Build lookup maps
-  const roomTypeMap = useMemo(() => new Map(roomTypes.map((rt) => [rt.id, rt.name])), [roomTypes]);
-  const boardTypeMap = useMemo(() => new Map(boardTypes.map((bt) => [bt.id, bt.name])), [boardTypes]);
+  const roomTypeMap = useMemo(() => new Map(roomTypes.map((rt) => [rt.id, rtNames[rt.id] ?? rt.name])), [roomTypes, rtNames]);
+  const boardTypeMap = useMemo(() => new Map(boardTypes.map((bt) => [bt.id, btNames[bt.id] ?? bt.name])), [boardTypes, btNames]);
+
+  // Margin lookup: hotelProviderId → combined margin % (hotel + provider)
+  const providerMarginMap = useMemo(() => new Map(providers.map((p) => [p.id, p.margin])), [providers]);
+  const hpMarginMap = useMemo(() => {
+    const map = new Map<number, number>();
+    for (const hp of hotelProviders) {
+      const hotel = hotels.find((h) => h.id === hp.hotelId);
+      const hotelMargin = hotel?.margin ?? 0;
+      const provMargin = providerMarginMap.get(hp.providerId) ?? 0;
+      map.set(hp.id, hotelMargin + provMargin);
+    }
+    return map;
+  }, [hotelProviders, hotels, providerMarginMap]);
+
+  // Client price helper
+  function clientPrice(basePrice: number, hotelProviderId: number): string {
+    const marginPct = hpMarginMap.get(hotelProviderId) ?? 0;
+    return (basePrice * (1 + marginPct / 100)).toFixed(2);
+  }
 
   // Hotel provider IDs for selected hotel
   const hotelProviderIds = useMemo(() => {
@@ -215,20 +246,20 @@ export function ReservationDetail({
     setPending(true);
     setMessage(null);
     try {
-      await submitReservation(reservation.id, {
+      const result = await submitReservation(reservation.id, {
         ...submitForm,
         cardNumber: submitForm.cardNumber || null,
         cardExpiry: submitForm.cardExpiry || null,
         cardCvv: submitForm.cardCvv || null,
         cardHolderName: submitForm.cardHolderName || null,
       });
-      const pendingStatus = statuses.find((s) =>
-        s.name.toLowerCase().includes("pending")
+      const newStatus = statuses.find((s) =>
+        s.name.toLowerCase() === result.status.toLowerCase()
       );
       setReservation((prev) => ({
         ...prev,
-        statusId: pendingStatus?.id ?? prev.statusId,
-        statusName: pendingStatus?.name ?? "Pending",
+        statusId: newStatus?.id ?? prev.statusId,
+        statusName: newStatus?.name ?? result.status,
       }));
       setShowSubmit(false);
       setSubmitForm({ ...EMPTY_SUBMIT });
@@ -246,14 +277,14 @@ export function ReservationDetail({
     setMessage(null);
     try {
       await addLine(reservation.id, lineForm);
-      // Refresh lines and reservation
-      const [updatedLines, updatedGuests] = await Promise.all([
+      const [updatedReservation, updatedLines, updatedGuests] = await Promise.all([
+        fetchReservation(reservation.id),
         fetchReservationLines(reservation.id),
         fetchReservationGuests(reservation.id),
       ]);
+      setReservation(updatedReservation);
       setLines(updatedLines);
       setGuests(updatedGuests);
-      setReservation((prev) => ({ ...prev, lineCount: updatedLines.length }));
       setShowAddLine(false);
       setLineForm({ ...EMPTY_LINE });
       setSelectedHotelId(0);
@@ -271,13 +302,14 @@ export function ReservationDetail({
     setMessage(null);
     try {
       await removeLine(reservation.id, lineId);
-      const [updatedLines, updatedGuests] = await Promise.all([
+      const [updatedReservation, updatedLines, updatedGuests] = await Promise.all([
+        fetchReservation(reservation.id),
         fetchReservationLines(reservation.id),
         fetchReservationGuests(reservation.id),
       ]);
+      setReservation(updatedReservation);
       setLines(updatedLines);
       setGuests(updatedGuests);
-      setReservation((prev) => ({ ...prev, lineCount: updatedLines.length }));
       setMessage(t["admin.reservations.line_removed"] ?? "Line removed.");
     } catch (e) {
       setMessage(e instanceof Error ? e.message : "Remove line failed");
@@ -327,7 +359,7 @@ export function ReservationDetail({
             <h2 className="text-2xl font-semibold">{reservation.reservationCode}</h2>
             <div className="mt-2 flex items-center gap-3">
               <StatusBadge variant={statusVariant(reservation.statusName)}>
-                {reservation.statusName}
+                {rsNames[reservation.statusId] ?? reservation.statusName}
               </StatusBadge>
               <span className="text-xs text-gray-500">
                 {t["admin.reservations.label.created"] ?? "Created"}: {formatDate(reservation.createdAt)}
@@ -347,7 +379,7 @@ export function ReservationDetail({
               >
                 {statuses.map((s) => (
                   <option key={s.id} value={s.id}>
-                    {s.name}
+                    {rsNames[s.id] ?? s.name}
                   </option>
                 ))}
               </select>
@@ -589,7 +621,7 @@ export function ReservationDetail({
           type="select"
           value={submitForm.paymentMethodId}
           onChange={(v) => setSubmitForm({ ...submitForm, paymentMethodId: Number(v) })}
-          options={enabledPaymentMethods.map((pm) => ({ value: pm.id, label: pm.name }))}
+          options={enabledPaymentMethods.map((pm) => ({ value: pm.id, label: pmNames[pm.id] ?? pm.name }))}
           placeholder={t["admin.reservations.select_payment_method"] ?? "Select payment method..."}
         />
         <FormField
@@ -648,7 +680,7 @@ export function ReservationDetail({
           }}
           options={filteredRoomConfigs.map((rc) => ({
             value: rc.id,
-            label: `${roomTypeMap.get(rc.roomTypeId) ?? `Room #${rc.roomTypeId}`} — Cap: ${rc.capacity}, ${rc.pricePerNight}/night`,
+            label: `${roomTypeMap.get(rc.roomTypeId) ?? `Room #${rc.roomTypeId}`} — Cap: ${rc.capacity}, ${clientPrice(rc.pricePerNight, rc.hotelProviderId)}/night`,
           }))}
           placeholder={t["admin.reservations.select_room"] ?? "Select room..."}
           disabled={!selectedHotelId}
@@ -658,10 +690,14 @@ export function ReservationDetail({
           type="select"
           value={lineForm.boardTypeId}
           onChange={(v) => setLineForm({ ...lineForm, boardTypeId: Number(v) })}
-          options={filteredBoardOptions.map((bo) => ({
-            value: bo.boardTypeId,
-            label: `${boardTypeMap.get(bo.boardTypeId) ?? `Board #${bo.boardTypeId}`} — ${bo.pricePerNight}/night`,
-          }))}
+          options={filteredBoardOptions.map((bo) => {
+            const rc = roomConfigs.find((r) => r.id === bo.hotelProviderRoomTypeId);
+            const hpId = rc?.hotelProviderId ?? 0;
+            return {
+              value: bo.boardTypeId,
+              label: `${boardTypeMap.get(bo.boardTypeId) ?? `Board #${bo.boardTypeId}`} — ${clientPrice(bo.pricePerNight, hpId)}/night`,
+            };
+          })}
           placeholder={t["admin.reservations.select_board"] ?? "Select board type..."}
           disabled={!lineForm.roomConfigurationId}
         />

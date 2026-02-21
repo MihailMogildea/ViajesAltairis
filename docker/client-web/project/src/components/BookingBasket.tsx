@@ -6,7 +6,7 @@ import { formatPrice } from "@/lib/utils";
 import { useLocale } from "@/context/LocaleContext";
 
 export default function BookingBasket() {
-  const { items, subtotal, promoDiscount, total, removeItem } = useBooking();
+  const { items, subtotal, promoDiscount, userDiscountAmount, taxEstimate, total, removeItem } = useBooking();
   const { locale, currency, t } = useLocale();
 
   if (items.length === 0) return null;
@@ -19,7 +19,7 @@ export default function BookingBasket() {
           <div key={item.id} className="flex items-center justify-between text-sm text-gray-600">
             <span className="truncate pr-2"><span className="font-medium">{item.room_type_name}</span> &middot; {item.hotel_name}</span>
             <span className="flex shrink-0 items-center gap-1">
-              <span className="font-medium">{formatPrice(item.line_total, currency.code, locale)}</span>
+              <span className="font-medium">{formatPrice(item.line_total, currency.code, locale, currency.exchangeRateToEur)}</span>
               <button
                 onClick={() => removeItem(item.id)}
                 className="ml-1 rounded p-0.5 text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors"
@@ -37,12 +37,24 @@ export default function BookingBasket() {
         {promoDiscount > 0 && (
           <div className="flex justify-between text-sm text-green-600">
             <span>{t("client.basket.discount")}</span>
-            <span>-{formatPrice(promoDiscount, currency.code, locale)}</span>
+            <span>-{formatPrice(promoDiscount, currency.code, locale, currency.exchangeRateToEur)}</span>
+          </div>
+        )}
+        {userDiscountAmount > 0 && (
+          <div className="flex justify-between text-sm text-green-600">
+            <span>{t("client.booking.member_discount")}</span>
+            <span>-{formatPrice(userDiscountAmount, currency.code, locale, currency.exchangeRateToEur)}</span>
+          </div>
+        )}
+        {taxEstimate > 0 && (
+          <div className="flex justify-between text-sm text-gray-500">
+            <span>{t("client.booking.tax")}</span>
+            <span>{formatPrice(taxEstimate, currency.code, locale, currency.exchangeRateToEur)}</span>
           </div>
         )}
         <div className="flex justify-between font-semibold text-gray-900">
           <span>{t("client.basket.total")}</span>
-          <span>{formatPrice(total, currency.code, locale)}</span>
+          <span>{formatPrice(total, currency.code, locale, currency.exchangeRateToEur)}</span>
         </div>
       </div>
       <Link href="/booking" className="mt-3 block rounded-lg bg-blue-600 py-2 text-center text-sm font-semibold text-white hover:bg-blue-700 transition-colors">

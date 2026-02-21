@@ -174,7 +174,7 @@ public class CreateDraftReservationHandler : IRequestHandler<CreateDraftReservat
 
     private static string GenerateCode()
     {
-        return $"RES-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+        return $"ALT-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString("N")[..6].ToUpper()}";
     }
 
     private static bool HasAnyOwnerField(CreateDraftReservationCommand c) =>

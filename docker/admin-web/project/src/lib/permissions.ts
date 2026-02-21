@@ -15,6 +15,14 @@ export const USER_TYPE_ID: Record<number, UserRole> = {
   4: "hotel_staff",
 };
 
+/** Human-readable labels for each role (used in sidebar + dashboard). */
+export const ROLE_LABELS: Record<UserRole, string> = {
+  admin: "Admin",
+  manager: "Manager",
+  agent: "Agent",
+  hotel_staff: "Hotel Staff",
+};
+
 export type Section =
   | "dashboard"
   | "hotels"
@@ -46,10 +54,10 @@ const ACCESS_MATRIX: Record<Section, Partial<Record<UserRole, AccessLevel>>> = {
   hotels:               { admin: "full", manager: "read",  agent: "read", hotel_staff: "own"  },
   providers:            { admin: "full" },
   reservations:         { admin: "full", manager: "full",  agent: "own",  hotel_staff: "own"  },
-  users:                { admin: "full", manager: "read" },
-  "business-partners":  { admin: "full", manager: "read",  agent: "own"  },
+  users:                { admin: "full", manager: "read",  agent: "read", hotel_staff: "read" },
+  "business-partners":  { admin: "full", manager: "read",  agent: "own",  hotel_staff: "own"  },
   pricing:              { admin: "full", manager: "read" },
-  subscriptions:        { admin: "full", manager: "read",  agent: "read" },
+  subscriptions:        { admin: "full", manager: "read",  agent: "read", hotel_staff: "read" },
   financial:            { admin: "full", manager: "read",  agent: "own",  hotel_staff: "own"  },
   operations:           { admin: "full", manager: "full",  hotel_staff: "own"  },
   reviews:              { admin: "full", manager: "full",  hotel_staff: "own"  },
@@ -65,7 +73,13 @@ export function getAccessLevel(
   return ACCESS_MATRIX[section][role] ?? null;
 }
 
-export function canAccess(role: UserRole, section: Section): boolean {
+/** Sections denied for B2B agents (agents with a business_partner_id). */
+const B2B_DENIED_SECTIONS: Section[] = ["users", "business-partners", "subscriptions", "financial"];
+
+export function canAccess(role: UserRole, section: Section, businessPartnerId?: number | null): boolean {
+  if (role === "agent" && businessPartnerId && B2B_DENIED_SECTIONS.includes(section)) {
+    return false;
+  }
   return getAccessLevel(role, section) !== null;
 }
 

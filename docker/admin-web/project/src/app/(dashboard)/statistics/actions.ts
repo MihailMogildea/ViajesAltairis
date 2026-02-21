@@ -21,7 +21,7 @@ import type {
 function buildParams(from?: string, to?: string, groupBy?: string): string {
   const params = new URLSearchParams();
   if (from) params.set("from", from);
-  if (to) params.set("to", to);
+  if (to) params.set("to", `${to}T23:59:59`);
   if (groupBy) params.set("groupBy", groupBy);
   const qs = params.toString();
   return qs ? `?${qs}` : "";

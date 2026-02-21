@@ -16,9 +16,12 @@ public class GetCancellationsHandler : IRequestHandler<GetCancellationsQuery, IE
     {
         using var connection = _db.CreateConnection();
         return await connection.QueryAsync<CancellationDto>(
-            @"SELECT id AS Id, reservation_id AS ReservationId, cancelled_by_user_id AS CancelledByUserId,
-                     reason AS Reason, penalty_percentage AS PenaltyPercentage, penalty_amount AS PenaltyAmount,
-                     refund_amount AS RefundAmount, currency_id AS CurrencyId, created_at AS CreatedAt
-              FROM cancellation ORDER BY created_at DESC");
+            @"SELECT c.id AS Id, c.reservation_id AS ReservationId, c.cancelled_by_user_id AS CancelledByUserId,
+                     u.email AS CancelledByUserEmail, c.reason AS Reason,
+                     c.penalty_percentage AS PenaltyPercentage, c.penalty_amount AS PenaltyAmount,
+                     c.refund_amount AS RefundAmount, c.currency_id AS CurrencyId, c.created_at AS CreatedAt
+              FROM cancellation c
+              JOIN user u ON u.id = c.cancelled_by_user_id
+              ORDER BY c.created_at DESC");
     }
 }

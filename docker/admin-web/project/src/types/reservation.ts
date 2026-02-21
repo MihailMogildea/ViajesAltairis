@@ -121,6 +121,7 @@ export interface CancellationDto {
   id: number;
   reservationId: number;
   cancelledByUserId: number;
+  cancelledByUserEmail: string;
   reason: string | null;
   penaltyPercentage: number;
   penaltyAmount: number;

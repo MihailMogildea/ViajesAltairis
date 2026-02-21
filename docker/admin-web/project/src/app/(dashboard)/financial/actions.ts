@@ -7,6 +7,7 @@ import type {
   CreatePaymentMethodRequest,
   PaymentTransactionDto,
   PaymentTransactionFeeDto,
+  PaymentTransactionStatusDto,
 } from "@/types/payment";
 
 // --- Invoices ---
@@ -70,10 +71,29 @@ export async function togglePaymentMethodEnabled(
 
 // --- Transactions ---
 
-export async function fetchTransactions(): Promise<PaymentTransactionDto[]> {
-  return apiFetch<PaymentTransactionDto[]>("/api/PaymentTransactions", {
-    cache: "no-store",
-  });
+export async function fetchTransactions(params?: {
+  from?: string;
+  to?: string;
+  statusId?: number;
+}): Promise<PaymentTransactionDto[]> {
+  const searchParams = new URLSearchParams();
+  if (params?.from) searchParams.set("from", params.from);
+  if (params?.to) searchParams.set("to", params.to);
+  if (params?.statusId) searchParams.set("statusId", String(params.statusId));
+  const qs = searchParams.toString();
+  return apiFetch<PaymentTransactionDto[]>(
+    `/api/PaymentTransactions${qs ? `?${qs}` : ""}`,
+    { cache: "no-store" }
+  );
+}
+
+export async function fetchPaymentTransactionStatuses(): Promise<
+  PaymentTransactionStatusDto[]
+> {
+  return apiFetch<PaymentTransactionStatusDto[]>(
+    "/api/PaymentTransactions/statuses",
+    { cache: "no-store" }
+  );
 }
 
 export async function fetchTransactionFees(): Promise<
@@ -81,5 +101,11 @@ export async function fetchTransactionFees(): Promise<
 > {
   return apiFetch<PaymentTransactionFeeDto[]>("/api/PaymentTransactionFees", {
     cache: "no-store",
+  });
+}
+
+export async function confirmTransaction(id: number): Promise<void> {
+  await apiFetch(`/api/PaymentTransactions/${id}/confirm`, {
+    method: "PATCH",
   });
 }

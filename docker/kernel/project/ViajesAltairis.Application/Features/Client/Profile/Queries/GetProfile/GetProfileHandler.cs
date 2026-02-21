@@ -30,16 +30,14 @@ public class GetProfileHandler : IRequestHandler<GetProfileQuery, GetProfileResp
                 COALESCE(l.iso_code, 'en') AS PreferredLanguage,
                 COALESCE(c.iso_code, 'EUR') AS PreferredCurrency,
                 u.discount AS Discount,
+                st.name AS SubscriptionType,
+                st.discount AS SubscriptionDiscount,
                 u.created_at AS CreatedAt
             FROM user u
             LEFT JOIN language l ON l.id = u.language_id
-            LEFT JOIN currency c ON c.id = (
-                SELECT st.currency_id
-                FROM user_subscription us
-                JOIN subscription_type st ON st.id = us.subscription_type_id
-                WHERE us.user_id = u.id AND us.active = TRUE
-                LIMIT 1
-            )
+            LEFT JOIN user_subscription us ON us.user_id = u.id AND us.active = TRUE
+            LEFT JOIN subscription_type st ON st.id = us.subscription_type_id
+            LEFT JOIN currency c ON c.id = st.currency_id
             WHERE u.id = @UserId
             """;
 

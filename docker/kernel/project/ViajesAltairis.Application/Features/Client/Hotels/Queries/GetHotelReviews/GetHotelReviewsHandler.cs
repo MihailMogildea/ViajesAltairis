@@ -54,10 +54,14 @@ public class GetHotelReviewsHandler : IRequestHandler<GetHotelReviewsQuery, GetH
         return new GetHotelReviewsResponse
         {
             Reviews = reviews,
-            TotalCount = stats.TotalCount,
+            TotalCount = (int)stats.TotalCount,
             AverageRating = stats.AvgRating
         };
     }
 
-    private record StatsRow(decimal AvgRating, int TotalCount);
+    private class StatsRow
+    {
+        public decimal AvgRating { get; set; }
+        public long TotalCount { get; set; }
+    }
 }

@@ -18,10 +18,16 @@ export interface PaymentTransactionDto {
   transactionReference: string;
   amount: number;
   currencyId: number;
+  currencyCode: string;
   exchangeRateId: number;
-  status: string;
+  statusId: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface PaymentTransactionStatusDto {
+  id: number;
+  name: string;
 }
 
 export interface PaymentTransactionFeeDto {

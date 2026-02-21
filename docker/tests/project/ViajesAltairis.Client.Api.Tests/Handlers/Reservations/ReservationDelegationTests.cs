@@ -114,7 +114,7 @@ public class ReservationDelegationTests
     public async Task GetReservationDetail_OwnReservation_ReturnsDetail()
     {
         _reservationApi.GetByIdAsync(1, Arg.Any<CancellationToken>())
-            .Returns(new ReservationDetailResult(1, 8, "confirmed", DateTime.UtcNow, 500, 50, "EUR", 1, null, []));
+            .Returns(new ReservationDetailResult(1, 8, 8, "confirmed", DateTime.UtcNow, 500, 50, "EUR", 1, null, []));
 
         var handler = new GetReservationDetailHandler(_reservationApi, _currentUser);
         var result = await handler.Handle(new GetReservationDetailQuery { ReservationId = 1 }, CancellationToken.None);

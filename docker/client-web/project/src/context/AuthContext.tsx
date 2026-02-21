@@ -24,7 +24,7 @@ const AuthContext = createContext<AuthState>({
 const PROFILE_KEY = "va_profile";
 const MOCK_PASSWORD = "password123";
 
-function mapProfileToUser(p: { id: number; email: string; firstName: string; lastName: string; discount: number }): User {
+function mapProfileToUser(p: { id: number; email: string; firstName: string; lastName: string; discount: number; subscriptionType?: string; subscriptionDiscount?: number }): User {
   return {
     id: p.id,
     email: p.email,
@@ -32,6 +32,8 @@ function mapProfileToUser(p: { id: number; email: string; firstName: string; las
     last_name: p.lastName,
     user_type: "client",
     discount: p.discount,
+    subscription_type: p.subscriptionType,
+    subscription_discount: p.subscriptionDiscount,
   };
 }
 
@@ -64,6 +66,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             try { setUser(JSON.parse(cached)); } catch { /* ignore */ }
           }
         });
+    } else {
+      // No token (mock login) — restore from cached profile
+      const cached = localStorage.getItem(PROFILE_KEY);
+      if (cached) {
+        try { setUser(JSON.parse(cached)); } catch { /* ignore */ }
+      }
     }
   }, []);
 

@@ -45,6 +45,7 @@ export default async function ReviewsPage() {
           reviews={reviews}
           responses={responses}
           access={access}
+          currentUserId={session?.userId ?? 0}
           t={t}
         />
       )}

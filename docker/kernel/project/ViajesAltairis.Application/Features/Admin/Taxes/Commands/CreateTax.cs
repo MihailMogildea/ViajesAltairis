@@ -32,6 +32,6 @@ public class CreateTaxHandler : IRequestHandler<CreateTaxCommand, TaxDto>
         };
         await _repository.AddAsync(entity, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-        return new TaxDto(entity.Id, entity.TaxTypeId, entity.CountryId, entity.AdministrativeDivisionId, entity.CityId, entity.Rate, entity.IsPercentage, entity.Enabled, entity.CreatedAt);
+        return new TaxDto { Id = entity.Id, TaxTypeId = entity.TaxTypeId, CountryId = entity.CountryId, AdministrativeDivisionId = entity.AdministrativeDivisionId, CityId = entity.CityId, Rate = entity.Rate, IsPercentage = entity.IsPercentage, Enabled = entity.Enabled, CreatedAt = entity.CreatedAt };
     }
 }

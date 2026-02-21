@@ -2,11 +2,12 @@
 
 import { use, useState, useEffect } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { notFound } from "next/navigation";
 import { getHotelById } from "@/data/hotels";
 import { getRoomsForHotel } from "@/data/rooms";
 import { getReviewsForHotel } from "@/data/reviews";
-import { apiGetHotelDetail, apiGetRoomAvailability, apiGetHotelReviews, apiGetCancellationPolicy } from "@/lib/api";
+import { apiGetHotelDetail, apiGetRoomAvailability, apiGetHotelReviews, apiGetCancellationPolicy, apiGetHotelTaxes } from "@/lib/api";
 import ImageCarousel from "@/components/ImageCarousel";
 import StarRating from "@/components/StarRating";
 import AmenityBadge from "@/components/AmenityBadge";
@@ -15,7 +16,7 @@ import ReviewCard from "@/components/ReviewCard";
 import BookingBasket from "@/components/BookingBasket";
 import { getDefaultCheckIn, getDefaultCheckOut } from "@/lib/utils";
 import { useLocale } from "@/context/LocaleContext";
-import type { Hotel, RoomConfig, Review, HotelImage, Amenity, ApiHotelDetail, ApiRoomAvailability, BoardOption, ApiCancellationPolicy } from "@/types";
+import type { Hotel, RoomConfig, Review, HotelImage, RoomImage, Amenity, ApiHotelDetail, ApiRoomAvailability, BoardOption, ApiCancellationPolicy, BasketItemTax } from "@/types";
 
 function mapApiDetailToHotel(api: ApiHotelDetail, fallback: Hotel | null): Hotel {
   const images: HotelImage[] = api.images.map((url, i) => ({
@@ -60,11 +61,84 @@ function mapApiDetailToHotel(api: ApiHotelDetail, fallback: Hotel | null): Hotel
   };
 }
 
+interface RoomTypeGroup {
+  roomTypeDbId: number;
+  roomTypeName: string;
+  capacity: number;
+  images: RoomImage[];
+  offers: RoomOffer[];
+}
+
+interface RoomOffer {
+  id: number;
+  basePricePerNight: number;
+  availableRooms: number;
+  boardOptions: BoardOption[];
+}
+
+function groupApiRoomsByType(apiRooms: ApiRoomAvailability[], hotelId: number): RoomTypeGroup[] {
+  const groups = new Map<number, RoomTypeGroup>();
+
+  for (const r of apiRooms) {
+    const dbId = r.roomTypeDbId ?? r.roomTypeId;
+    const sorted = [...r.boardOptions].sort((a, b) => a.pricePerNight - b.pricePerNight);
+    const offer: RoomOffer = {
+      id: Number(r.roomTypeId),
+      basePricePerNight: r.basePricePerNight,
+      availableRooms: r.availableRooms,
+      boardOptions: sorted.map((b): BoardOption => ({
+        board_type_id: Number(b.boardTypeId),
+        board_type_name: b.boardTypeName,
+        board_type_code: b.boardTypeName.toLowerCase().replace(/\s+/g, "_"),
+        price_supplement: b.pricePerNight,
+      })),
+    };
+
+    const existing = groups.get(dbId);
+    if (existing) {
+      existing.offers.push(offer);
+      // Merge images
+      for (const url of r.images) {
+        if (!existing.images.some((img) => img.url === url)) {
+          existing.images.push({
+            id: existing.images.length + 1,
+            room_config_id: dbId,
+            url,
+            alt_text: `${r.roomTypeName} - Image ${existing.images.length + 1}`,
+            sort_order: existing.images.length + 1,
+          });
+        }
+      }
+    } else {
+      groups.set(dbId, {
+        roomTypeDbId: dbId,
+        roomTypeName: r.roomTypeName,
+        capacity: r.maxGuests,
+        images: r.images.map((url, i) => ({
+          id: i + 1,
+          room_config_id: dbId,
+          url,
+          alt_text: `${r.roomTypeName} - Image ${i + 1}`,
+          sort_order: i + 1,
+        })),
+        offers: [offer],
+      });
+    }
+  }
+
+  // Sort offers by base price within each group
+  for (const group of groups.values()) {
+    group.offers.sort((a, b) => a.basePricePerNight - b.basePricePerNight);
+  }
+
+  return Array.from(groups.values());
+}
+
+// Keep for fallback data compatibility
 function mapApiRoomsToRoomConfigs(apiRooms: ApiRoomAvailability[], hotelId: number): RoomConfig[] {
   return apiRooms.map((r) => {
-    // Sort board options by price so cheapest is base — avoids negative supplements
+    const basePrice = r.basePricePerNight;
     const sorted = [...r.boardOptions].sort((a, b) => a.pricePerNight - b.pricePerNight);
-    const basePrice = sorted[0]?.pricePerNight ?? 0;
     return {
       id: Number(r.roomTypeId),
       hotel_id: hotelId,
@@ -74,13 +148,19 @@ function mapApiRoomsToRoomConfigs(apiRooms: ApiRoomAvailability[], hotelId: numb
       quantity: r.availableRooms,
       base_price_per_night: basePrice,
       currency_code: "EUR",
-      images: [],
+      images: r.images.map((url, i) => ({
+        id: Number(r.roomTypeId) * 10 + i,
+        room_config_id: Number(r.roomTypeId),
+        url,
+        alt_text: `${r.roomTypeName} - Image ${i + 1}`,
+        sort_order: i + 1,
+      })),
       amenities: [],
       board_options: sorted.map((b): BoardOption => ({
         board_type_id: Number(b.boardTypeId),
         board_type_name: b.boardTypeName,
         board_type_code: b.boardTypeName.toLowerCase().replace(/\s+/g, "_"),
-        price_supplement: b.pricePerNight - basePrice,
+        price_supplement: b.pricePerNight,
       })),
     };
   });
@@ -90,18 +170,21 @@ export default function HotelDetailPage({ params }: { params: Promise<{ id: stri
   const { id } = use(params);
   const hotelId = Number(id);
   const fallbackHotel = getHotelById(hotelId) ?? null;
-  const { t } = useLocale();
+  const { locale, t } = useLocale();
+  const searchParams = useSearchParams();
 
   const [hotel, setHotel] = useState<Hotel | null>(fallbackHotel);
+  const [roomGroups, setRoomGroups] = useState<RoomTypeGroup[]>([]);
   const [rooms, setRooms] = useState<RoomConfig[]>(fallbackHotel ? getRoomsForHotel(hotelId) : []);
   const [reviews, setReviews] = useState<Review[]>(fallbackHotel ? getReviewsForHotel(hotelId) : []);
   const [avgRating, setAvgRating] = useState(0);
 
-  const [checkIn, setCheckIn] = useState(getDefaultCheckIn());
-  const [checkOut, setCheckOut] = useState(getDefaultCheckOut());
-  const [guests, setGuests] = useState(2);
+  const [checkIn, setCheckIn] = useState(searchParams.get("checkIn") || getDefaultCheckIn());
+  const [checkOut, setCheckOut] = useState(searchParams.get("checkOut") || getDefaultCheckOut());
+  const [guests, setGuests] = useState(Number(searchParams.get("guests")) || 2);
   const [cancellationPolicy, setCancellationPolicy] = useState<ApiCancellationPolicy[]>([]);
   const [policyOpen, setPolicyOpen] = useState(false);
+  const [taxes, setTaxes] = useState<BasketItemTax[]>([]);
 
   // Fetch hotel detail from API
   useEffect(() => {
@@ -111,8 +194,11 @@ export default function HotelDetailPage({ params }: { params: Promise<{ id: stri
     apiGetCancellationPolicy(hotelId)
       .then(setCancellationPolicy)
       .catch(() => { /* no policy data */ });
+    apiGetHotelTaxes(hotelId)
+      .then((t) => setTaxes(t.map((tx) => ({ taxTypeName: tx.taxTypeName, rate: tx.rate, isPercentage: tx.isPercentage }))))
+      .catch(() => { /* no tax data */ });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hotelId]);
+  }, [hotelId, locale]);
 
   // Fetch reviews from API
   useEffect(() => {
@@ -140,15 +226,21 @@ export default function HotelDetailPage({ params }: { params: Promise<{ id: stri
         setReviews(fallbackReviews);
         setAvgRating(fallbackReviews.length > 0 ? fallbackReviews.reduce((s, r) => s + r.rating, 0) / fallbackReviews.length : 0);
       });
-  }, [hotelId]);
+  }, [hotelId, locale]);
 
   // Fetch room availability when dates or guests change
   useEffect(() => {
     if (!checkIn || !checkOut) return;
     apiGetRoomAvailability(hotelId, checkIn, checkOut, guests)
-      .then((apiRooms) => setRooms(mapApiRoomsToRoomConfigs(apiRooms, hotelId)))
-      .catch(() => setRooms(getRoomsForHotel(hotelId)));
-  }, [hotelId, checkIn, checkOut, guests]);
+      .then((apiRooms) => {
+        setRoomGroups(groupApiRoomsByType(apiRooms, hotelId));
+        setRooms(mapApiRoomsToRoomConfigs(apiRooms, hotelId));
+      })
+      .catch(() => {
+        setRoomGroups([]);
+        setRooms(getRoomsForHotel(hotelId));
+      });
+  }, [hotelId, checkIn, checkOut, guests, locale]);
 
   if (!hotel) notFound();
 
@@ -288,16 +380,29 @@ export default function HotelDetailPage({ params }: { params: Promise<{ id: stri
                 </div>
               </div>
               <div className="space-y-4">
-                {rooms.map((room) => (
-                  <RoomCard
-                    key={room.id}
-                    room={room}
-                    hotelId={hotel.id}
-                    hotelName={hotel.name}
-                    checkIn={checkIn}
-                    checkOut={checkOut}
-                  />
-                ))}
+                {roomGroups.length > 0
+                  ? roomGroups.map((group) => (
+                      <RoomCard
+                        key={group.roomTypeDbId}
+                        group={group}
+                        hotelId={hotel.id}
+                        hotelName={hotel.name}
+                        taxes={taxes}
+                        checkIn={checkIn}
+                        checkOut={checkOut}
+                      />
+                    ))
+                  : rooms.map((room) => (
+                      <RoomCard
+                        key={room.id}
+                        room={room}
+                        hotelId={hotel.id}
+                        hotelName={hotel.name}
+                        taxes={taxes}
+                        checkIn={checkIn}
+                        checkOut={checkOut}
+                      />
+                    ))}
               </div>
             </div>
 

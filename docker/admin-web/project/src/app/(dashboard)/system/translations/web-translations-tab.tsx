@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { WebTranslationDto, LanguageDto } from "@/types/system";
 import { DataTable, Column } from "@/components/data-table";
 import { FormModal } from "@/components/form-modal";
@@ -13,6 +13,17 @@ import {
   updateWebTranslation,
   deleteWebTranslation,
 } from "./actions";
+
+interface SubGroup {
+  subKey: string;
+  items: WebTranslationDto[];
+}
+
+interface Group {
+  groupKey: string;
+  subGroups: SubGroup[];
+  totalCount: number;
+}
 
 export function WebTranslationsTab({
   webTranslations: initial,
@@ -29,12 +40,60 @@ export function WebTranslationsTab({
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(() => {
+    const map: Record<string, boolean> = {};
+    for (const item of initial) {
+      const groupKey = item.translationKey.split(".")[0] ?? "(root)";
+      map[groupKey] = true;
+    }
+    return map;
+  });
+  const [collapsedSubs, setCollapsedSubs] = useState<Record<string, boolean>>(() => {
+    const map: Record<string, boolean> = {};
+    for (const item of initial) {
+      const parts = item.translationKey.split(".");
+      const subId = `${parts[0] ?? "(root)"}.${parts[1] ?? "(root)"}`;
+      map[subId] = true;
+    }
+    return map;
+  });
 
   const [formKey, setFormKey] = useState("");
   const [formLanguageId, setFormLanguageId] = useState<number | string>("");
   const [formValue, setFormValue] = useState("");
 
   const dismissMessage = useCallback(() => setMessage(null), []);
+
+  // Two-level grouping: "admin.home.login" → group "admin", sub "home"
+  const grouped = useMemo((): Group[] => {
+    const map = new Map<string, Map<string, WebTranslationDto[]>>();
+    for (const item of items) {
+      const parts = item.translationKey.split(".");
+      const groupKey = parts[0] ?? "(root)";
+      const subKey = parts[1] ?? "(root)";
+      if (!map.has(groupKey)) map.set(groupKey, new Map());
+      const subMap = map.get(groupKey)!;
+      if (!subMap.has(subKey)) subMap.set(subKey, []);
+      subMap.get(subKey)!.push(item);
+    }
+    return [...map.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([groupKey, subMap]) => ({
+        groupKey,
+        totalCount: [...subMap.values()].reduce((sum, arr) => sum + arr.length, 0),
+        subGroups: [...subMap.entries()]
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([subKey, items]) => ({ subKey, items })),
+      }));
+  }, [items]);
+
+  function toggleGroup(key: string) {
+    setCollapsedGroups((prev) => ({ ...prev, [key]: !prev[key] }));
+  }
+
+  function toggleSub(key: string) {
+    setCollapsedSubs((prev) => ({ ...prev, [key]: !prev[key] }));
+  }
 
   function buildPayload() {
     return {
@@ -112,7 +171,7 @@ export function WebTranslationsTab({
     { key: "id", header: "ID", className: "w-16" },
     {
       key: "translationKey",
-      header: t["admin.label.translation_key"] ?? "Translation Key",
+      header: t["admin.label.translation_key"] ?? "Key",
     },
     {
       key: "languageId",
@@ -144,28 +203,96 @@ export function WebTranslationsTab({
         }
       />
 
-      <DataTable
-        columns={columns}
-        data={items}
-        keyField="id"
-        emptyMessage={t["admin.label.no_data"] ?? "No web translations found."}
-        actions={(item) => (
-          <>
-            <button
-              onClick={() => openEdit(item)}
-              className="rounded border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
-            >
-              {t["admin.action.edit"] ?? "Edit"}
-            </button>
-            <button
-              onClick={() => setDeleting(item)}
-              className="rounded border border-red-300 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-50"
-            >
-              {t["admin.action.delete"] ?? "Delete"}
-            </button>
-          </>
-        )}
-      />
+      {grouped.length === 0 ? (
+        <div className="rounded-lg border border-gray-200 bg-white p-8 text-center text-sm text-gray-500">
+          {t["admin.label.no_data"] ?? "No web translations found."}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {grouped.map(({ groupKey, subGroups, totalCount }) => (
+            <div key={groupKey} className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+              {/* Top-level group header */}
+              <button
+                onClick={() => toggleGroup(groupKey)}
+                className="flex w-full items-center justify-between bg-gray-50 px-4 py-3 text-left hover:bg-gray-100"
+              >
+                <span className="text-sm font-semibold text-gray-800">
+                  {groupKey}
+                  <span className="ml-2 text-xs font-normal text-gray-400">
+                    ({totalCount})
+                  </span>
+                </span>
+                <svg
+                  className={`h-4 w-4 text-gray-400 transition-transform ${collapsedGroups[groupKey] ? "" : "rotate-180"}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {!collapsedGroups[groupKey] && (
+                <div className="divide-y divide-gray-100">
+                  {subGroups.map(({ subKey, items: subItems }) => {
+                    const subId = `${groupKey}.${subKey}`;
+                    return (
+                      <div key={subId}>
+                        {/* Sub-group header */}
+                        <button
+                          onClick={() => toggleSub(subId)}
+                          className="flex w-full items-center justify-between bg-gray-50/50 px-6 py-2 text-left hover:bg-gray-100/50"
+                        >
+                          <span className="text-xs font-medium text-gray-600">
+                            {subKey}
+                            <span className="ml-2 text-xs font-normal text-gray-400">
+                              ({subItems.length})
+                            </span>
+                          </span>
+                          <svg
+                            className={`h-3 w-3 text-gray-400 transition-transform ${collapsedSubs[subId] ? "" : "rotate-180"}`}
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={2}
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
+                        {!collapsedSubs[subId] && (
+                          <DataTable
+                            columns={columns}
+                            data={subItems}
+                            keyField="id"
+                            emptyMessage=""
+                            actions={(item) => (
+                              <>
+                                <button
+                                  onClick={() => openEdit(item)}
+                                  className="rounded border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                                >
+                                  {t["admin.action.edit"] ?? "Edit"}
+                                </button>
+                                <button
+                                  onClick={() => setDeleting(item)}
+                                  className="rounded border border-red-300 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-50"
+                                >
+                                  {t["admin.action.delete"] ?? "Delete"}
+                                </button>
+                              </>
+                            )}
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       <FormModal
         open={showCreate || !!editing}

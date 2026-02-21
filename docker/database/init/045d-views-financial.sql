@@ -37,12 +37,14 @@ SELECT
     r.reservation_code,
     pt.amount,
     cur.iso_code      AS currency_code,
-    pt.status,
+    pts.id            AS status_id,
+    pts.name          AS status_name,
     pt.created_at,
     (SELECT COALESCE(SUM(ptf.fee_amount), 0)
      FROM payment_transaction_fee ptf
      WHERE ptf.payment_transaction_id = pt.id) AS total_fees
 FROM payment_transaction pt
+JOIN payment_transaction_status pts ON pts.id = pt.status_id
 JOIN payment_method pm     ON pm.id = pt.payment_method_id
 JOIN reservation r         ON r.id = pt.reservation_id
 JOIN currency cur          ON cur.id = pt.currency_id;

@@ -1,10 +1,11 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { UserRole } from "@/lib/permissions";
 import type { Locale } from "@/lib/locale";
-import { NAV_ITEMS, canAccess } from "@/lib/permissions";
+import { NAV_ITEMS, ROLE_LABELS, canAccess } from "@/lib/permissions";
 import { logoutAction } from "@/lib/actions";
 import { LocaleSwitcher } from "./locale-switcher";
 
@@ -13,22 +14,23 @@ interface SidebarProps {
   userName: string;
   locale: Locale;
   t: Record<string, string>;
+  businessPartnerId?: number | null;
 }
 
-export function Sidebar({ role, userName, locale, t }: SidebarProps) {
+export function Sidebar({ role, userName, locale, t, businessPartnerId }: SidebarProps) {
   const pathname = usePathname();
-  const visibleItems = NAV_ITEMS.filter((item) => canAccess(role, item.section));
+  const visibleItems = NAV_ITEMS.filter((item) => canAccess(role, item.section, businessPartnerId));
 
   return (
     <aside className="flex w-64 flex-col border-r border-gray-200 bg-white">
-      <div className="flex items-center justify-between p-6">
+      <div className="flex items-center gap-3 p-6">
+        <Image src="/logo.jpg" alt="ViajesAltairis" width={40} height={40} className="rounded" />
         <div>
           <h1 className="text-xl font-bold">ViajesAltairis</h1>
           <p className="mt-1 text-xs text-gray-400">
             {t["admin.sidebar.admin"] ?? "Admin"}
           </p>
         </div>
-        <LocaleSwitcher current={locale} />
       </div>
 
       <nav className="flex-1 space-y-1 px-3">
@@ -57,10 +59,15 @@ export function Sidebar({ role, userName, locale, t }: SidebarProps) {
       </nav>
 
       <div className="border-t border-gray-200 p-4">
-        <p className="truncate text-sm font-medium text-gray-700">
-          {userName}
-        </p>
-        <p className="mb-3 text-xs text-gray-400">{role}</p>
+        <div className="mb-3 flex items-center justify-between">
+          <div>
+            <p className="truncate text-sm font-medium text-gray-700">
+              {userName}
+            </p>
+            <p className="text-xs text-gray-400">{ROLE_LABELS[role] ?? role}</p>
+          </div>
+          <LocaleSwitcher current={locale} />
+        </div>
         <form action={logoutAction}>
           <button
             type="submit"

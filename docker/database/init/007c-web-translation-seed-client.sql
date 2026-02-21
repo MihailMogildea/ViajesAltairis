@@ -88,8 +88,8 @@ INSERT INTO web_translation (translation_key, language_id, value) VALUES
 ('client.hotel_card.review', 2, 'reseña'),
 ('client.hotel_card.reviews', 1, 'reviews'),
 ('client.hotel_card.reviews', 2, 'reseñas'),
-('client.hotel_card.per_night', 1, 'per night'),
-('client.hotel_card.per_night', 2, 'por noche'),
+('client.hotel_card.per_night', 1, 'per room / night'),
+('client.hotel_card.per_night', 2, 'por hab. / noche'),
 
 -- Room card
 ('client.room.capacity', 1, 'Capacity:'),
@@ -110,6 +110,8 @@ INSERT INTO web_translation (translation_key, language_id, value) VALUES
 ('client.room.added', 2, '¡Añadido!'),
 ('client.room.add_to_basket', 1, 'Add to Basket'),
 ('client.room.add_to_basket', 2, 'Añadir a la Cesta'),
+('client.room.option', 1, 'Option'),
+('client.room.option', 2, 'Opción'),
 
 -- Review card
 ('client.review.response_from', 1, 'Response from'),
@@ -558,6 +560,10 @@ INSERT INTO web_translation (translation_key, language_id, value) VALUES
 ('client.invoices.total', 2, 'Total'),
 ('client.invoices.view_reservation', 1, 'View Reservation'),
 ('client.invoices.view_reservation', 2, 'Ver Reserva'),
+('client.invoices.download_pdf', 1, 'Download PDF'),
+('client.invoices.download_pdf', 2, 'Descargar PDF'),
+('client.invoices.downloading', 1, 'Downloading...'),
+('client.invoices.downloading', 2, 'Descargando...'),
 
 -- Subscriptions
 ('client.subscriptions.title', 1, 'Subscription Plans'),
@@ -579,4 +585,18 @@ INSERT INTO web_translation (translation_key, language_id, value) VALUES
 ('client.subscriptions.active_until', 1, 'Active until'),
 ('client.subscriptions.active_until', 2, 'Activa hasta'),
 ('client.subscriptions.login_to_subscribe', 1, 'Login to Subscribe'),
-('client.subscriptions.login_to_subscribe', 2, 'Inicia Sesión para Suscribirte');
+('client.subscriptions.login_to_subscribe', 2, 'Inicia Sesión para Suscribirte'),
+
+-- Reservation statuses
+('client.status.draft', 1, 'Draft'),
+('client.status.draft', 2, 'Borrador'),
+('client.status.pending', 1, 'Pending'),
+('client.status.pending', 2, 'Pendiente'),
+('client.status.confirmed', 1, 'Confirmed'),
+('client.status.confirmed', 2, 'Confirmada'),
+('client.status.checked_in', 1, 'Checked In'),
+('client.status.checked_in', 2, 'Registrado'),
+('client.status.completed', 1, 'Completed'),
+('client.status.completed', 2, 'Completada'),
+('client.status.cancelled', 1, 'Cancelled'),
+('client.status.cancelled', 2, 'Cancelada');

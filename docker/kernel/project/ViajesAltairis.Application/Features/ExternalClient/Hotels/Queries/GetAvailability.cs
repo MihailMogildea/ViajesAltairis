@@ -27,6 +27,8 @@ public class GetAvailabilityHandler : IRequestHandler<GetAvailabilityQuery, GetA
                 hprt.quantity AS TotalRooms,
                 hprt.price_per_night AS PricePerNight,
                 cur.iso_code AS CurrencyCode,
+                p.margin AS ProviderMargin,
+                h.margin AS HotelMargin,
                 hprt.quantity - COALESCE(booked.rooms_booked, 0) AS AvailableRooms
             FROM hotel_provider_room_type hprt
             JOIN hotel_provider hp ON hp.id = hprt.hotel_provider_id
@@ -48,13 +50,64 @@ public class GetAvailabilityHandler : IRequestHandler<GetAvailabilityQuery, GetA
             HAVING AvailableRooms > 0
             ORDER BY rt.name, p.name";
 
-        var rooms = (await connection.QueryAsync<RoomAvailabilityDto>(sql, new
+        var rows = (await connection.QueryAsync<AvailabilityRow>(sql, new
         {
             request.HotelId,
             CheckIn = request.CheckIn.ToString("yyyy-MM-dd"),
             CheckOut = request.CheckOut.ToString("yyyy-MM-dd")
         })).ToList();
 
+        // Seasonal margin lookup
+        var adminDivId = await connection.ExecuteScalarAsync<long?>(
+            "SELECT c.administrative_division_id FROM hotel h JOIN city c ON c.id = h.city_id WHERE h.id = @HotelId",
+            new { request.HotelId });
+
+        decimal seasonalMarginPct = 0;
+        if (adminDivId.HasValue)
+        {
+            var checkInMmDd = request.CheckIn.ToString("MM-dd");
+            var checkOutMmDd = request.CheckOut.ToString("MM-dd");
+            seasonalMarginPct = await connection.ExecuteScalarAsync<decimal?>(
+                @"SELECT sm.margin FROM seasonal_margin sm
+                  WHERE sm.administrative_division_id = @AdminDivId
+                    AND (CASE WHEN sm.start_month_day <= sm.end_month_day THEN
+                           @CheckInMmDd <= sm.end_month_day AND @CheckOutMmDd >= sm.start_month_day
+                         ELSE
+                           @CheckInMmDd >= sm.start_month_day OR @CheckOutMmDd <= sm.end_month_day
+                         END)
+                  ORDER BY sm.margin DESC LIMIT 1",
+                new { AdminDivId = adminDivId.Value, CheckInMmDd = checkInMmDd, CheckOutMmDd = checkOutMmDd }) ?? 0;
+        }
+
+        // Apply provider + hotel + seasonal margins
+        var rooms = rows.Select(r =>
+        {
+            var marginFactor = 1 + (r.ProviderMargin + r.HotelMargin + seasonalMarginPct) / 100m;
+            return new RoomAvailabilityDto
+            {
+                HotelProviderRoomTypeId = r.HotelProviderRoomTypeId,
+                RoomTypeName = r.RoomTypeName,
+                ProviderName = r.ProviderName,
+                TotalRooms = r.TotalRooms,
+                PricePerNight = Math.Round(r.PricePerNight * marginFactor, 2),
+                CurrencyCode = r.CurrencyCode,
+                AvailableRooms = r.AvailableRooms,
+            };
+        }).ToList();
+
         return new GetAvailabilityResponse(request.HotelId, rooms);
+    }
+
+    private class AvailabilityRow
+    {
+        public long HotelProviderRoomTypeId { get; set; }
+        public string RoomTypeName { get; set; } = string.Empty;
+        public string ProviderName { get; set; } = string.Empty;
+        public int TotalRooms { get; set; }
+        public decimal PricePerNight { get; set; }
+        public string CurrencyCode { get; set; } = string.Empty;
+        public decimal ProviderMargin { get; set; }
+        public decimal HotelMargin { get; set; }
+        public int AvailableRooms { get; set; }
     }
 }

@@ -1,6 +1,7 @@
 import { getSession } from "@/lib/auth";
 import { getLocale } from "@/lib/locale-server";
 import { loadTranslations } from "@/lib/translations";
+import { ROLE_LABELS } from "@/lib/permissions";
 import { apiFetch } from "@/lib/api";
 import Link from "next/link";
 import type { HotelDto } from "@/types/hotel";
@@ -11,7 +12,7 @@ import type { InvoiceDto } from "@/types/invoice";
 interface DashboardStats {
   totalHotels: number;
   activeHotels: number;
-  pendingReservations: number;
+  confirmedReservations: number;
   hiddenReviews: number;
   recentReservations: ReservationAdminDto[];
 }
@@ -26,9 +27,9 @@ async function loadStats(): Promise<DashboardStats> {
   return {
     totalHotels: hotels.length,
     activeHotels: hotels.filter((h) => h.enabled).length,
-    pendingReservations: reservations.filter((r) => r.statusName?.toLowerCase().includes("pending")).length,
+    confirmedReservations: reservations.filter((r) => r.statusName?.toLowerCase().includes("confirmed")).length,
     hiddenReviews: reviews.filter((r) => !r.visible).length,
-    recentReservations: reservations.slice(0, 5),
+    recentReservations: reservations.filter((r) => r.statusName?.toLowerCase() === "confirmed").slice(0, 5),
   };
 }
 
@@ -46,9 +47,9 @@ export default async function DashboardPage() {
       href: "/hotels",
     },
     {
-      label: t["admin.dashboard.pending_reservations"] ?? "Pending Reservations",
-      value: String(stats.pendingReservations),
-      sub: t["admin.dashboard.awaiting_confirmation"] ?? "awaiting confirmation",
+      label: t["admin.dashboard.confirmed_reservations"] ?? "Confirmed Bookings",
+      value: String(stats.confirmedReservations),
+      sub: t["admin.dashboard.confirmed_bookings"] ?? "confirmed",
       href: "/reservations",
     },
     {
@@ -67,7 +68,7 @@ export default async function DashboardPage() {
       <p className="mb-6 text-sm text-gray-500">
         {t["admin.dashboard.welcome"] ?? "Welcome"}, {session?.name}.{" "}
         {t["admin.dashboard.role_label"] ?? "You are signed in as"}{" "}
-        <span className="font-medium">{session?.role}</span>.
+        <span className="font-medium">{session?.role ? (ROLE_LABELS[session.role] ?? session.role) : ""}</span>.
       </p>
 
       <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -86,7 +87,7 @@ export default async function DashboardPage() {
 
       <div>
         <h3 className="mb-3 text-lg font-semibold">
-          {t["admin.dashboard.recent_reservations"] ?? "Recent Reservations"}
+          {t["admin.dashboard.recent_confirmed"] ?? "Recent Confirmed Bookings"}
         </h3>
         {stats.recentReservations.length === 0 ? (
           <p className="text-sm text-gray-500">
@@ -136,7 +137,7 @@ export default async function DashboardPage() {
                       {r.ownerFirstName} {r.ownerLastName}
                     </td>
                     <td className="px-4 py-3 text-gray-700">
-                      {r.totalPrice.toFixed(2)} {r.currencyCode}
+                      {(r.totalPrice ?? 0).toFixed(2)} {r.currencyCode}
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-500">
                       {new Date(r.createdAt).toLocaleDateString()}

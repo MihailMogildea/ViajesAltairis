@@ -38,6 +38,7 @@ public class GetHotelDetailHandler : IRequestHandler<GetHotelDetailQuery, HotelD
                    room_type_name AS RoomTypeName, provider_name AS ProviderName,
                    capacity AS Capacity, quantity AS Quantity,
                    price_per_night AS PricePerNight, currency_code AS CurrencyCode,
+                   provider_margin AS ProviderMargin, hotel_margin AS HotelMargin,
                    enabled AS Enabled
             FROM v_hotel_room_catalog
             WHERE hotel_id = @HotelId AND enabled = TRUE";
@@ -63,13 +64,21 @@ public class GetHotelDetailHandler : IRequestHandler<GetHotelDetailQuery, HotelD
             var boardsByRoom = boards.GroupBy(b => b.HotelProviderRoomTypeId)
                                      .ToDictionary(g => g.Key, g => g.ToList());
 
-            roomDtos = rooms.Select(r => new RoomCatalogDto(
-                r.HotelProviderRoomTypeId, r.RoomTypeName, r.ProviderName,
-                r.Capacity, r.Quantity, r.PricePerNight, r.CurrencyCode, r.Enabled,
-                boardsByRoom.GetValueOrDefault(r.HotelProviderRoomTypeId, [])
-                    .Select(b => new BoardOptionDto(b.HotelProviderRoomTypeBoardId, b.BoardTypeName, b.PricePerNight, b.Enabled))
-                    .ToList()
-            )).ToList();
+            // Apply provider + hotel margins (no dates available for seasonal)
+            roomDtos = rooms.Select(r =>
+            {
+                var marginFactor = 1 + (r.ProviderMargin + r.HotelMargin) / 100m;
+                return new RoomCatalogDto(
+                    r.HotelProviderRoomTypeId, r.RoomTypeName, r.ProviderName,
+                    r.Capacity, r.Quantity,
+                    Math.Round(r.PricePerNight * marginFactor, 2),
+                    r.CurrencyCode, r.Enabled,
+                    boardsByRoom.GetValueOrDefault(r.HotelProviderRoomTypeId, [])
+                        .Select(b => new BoardOptionDto(
+                            b.HotelProviderRoomTypeBoardId, b.BoardTypeName,
+                            Math.Round(b.PricePerNight * marginFactor, 2), b.Enabled))
+                        .ToList());
+            }).ToList();
         }
 
         const string amenitiesSql = @"
@@ -88,19 +97,47 @@ public class GetHotelDetailHandler : IRequestHandler<GetHotelDetailQuery, HotelD
             roomDtos, amenities);
     }
 
-    private record HotelDetailRow(
-        long HotelId, string HotelName, int Stars, string Address,
-        string? Email, string? Phone, TimeOnly CheckInTime, TimeOnly CheckOutTime,
-        decimal? Latitude, decimal? Longitude,
-        string CityName, string AdminDivisionName, string CountryName,
-        decimal? AvgRating, int ReviewCount,
-        int? FreeCancellationHours, decimal? PenaltyPercentage);
+    private class HotelDetailRow
+    {
+        public long HotelId { get; set; }
+        public string HotelName { get; set; } = string.Empty;
+        public int Stars { get; set; }
+        public string Address { get; set; } = string.Empty;
+        public string? Email { get; set; }
+        public string? Phone { get; set; }
+        public TimeOnly CheckInTime { get; set; }
+        public TimeOnly CheckOutTime { get; set; }
+        public decimal? Latitude { get; set; }
+        public decimal? Longitude { get; set; }
+        public string CityName { get; set; } = string.Empty;
+        public string AdminDivisionName { get; set; } = string.Empty;
+        public string CountryName { get; set; } = string.Empty;
+        public decimal? AvgRating { get; set; }
+        public int ReviewCount { get; set; }
+        public int? FreeCancellationHours { get; set; }
+        public decimal? PenaltyPercentage { get; set; }
+    }
 
-    private record RoomRow(
-        long HotelProviderRoomTypeId, string RoomTypeName, string ProviderName,
-        int Capacity, int Quantity, decimal PricePerNight, string CurrencyCode, bool Enabled);
+    private class RoomRow
+    {
+        public long HotelProviderRoomTypeId { get; set; }
+        public string RoomTypeName { get; set; } = string.Empty;
+        public string ProviderName { get; set; } = string.Empty;
+        public int Capacity { get; set; }
+        public int Quantity { get; set; }
+        public decimal PricePerNight { get; set; }
+        public string CurrencyCode { get; set; } = string.Empty;
+        public decimal ProviderMargin { get; set; }
+        public decimal HotelMargin { get; set; }
+        public bool Enabled { get; set; }
+    }
 
-    private record BoardRow(
-        long HotelProviderRoomTypeBoardId, long HotelProviderRoomTypeId,
-        string BoardTypeName, decimal PricePerNight, bool Enabled);
+    private class BoardRow
+    {
+        public long HotelProviderRoomTypeBoardId { get; set; }
+        public long HotelProviderRoomTypeId { get; set; }
+        public string BoardTypeName { get; set; } = string.Empty;
+        public decimal PricePerNight { get; set; }
+        public bool Enabled { get; set; }
+    }
 }

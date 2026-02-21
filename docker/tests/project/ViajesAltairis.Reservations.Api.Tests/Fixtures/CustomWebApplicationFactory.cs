@@ -107,6 +107,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
             services.Replace(ServiceDescriptor.Scoped<IScheduledApiClient>(_ => Substitute.For<IScheduledApiClient>()));
             services.Replace(ServiceDescriptor.Singleton<IEcbRateParser>(_ => Substitute.For<IEcbRateParser>()));
             services.Replace(ServiceDescriptor.Scoped<ITranslationService>(_ => Substitute.For<ITranslationService>()));
+            services.Replace(ServiceDescriptor.Scoped<IInvoicePdfGenerator>(_ => Substitute.For<IInvoicePdfGenerator>()));
         });
     }
 

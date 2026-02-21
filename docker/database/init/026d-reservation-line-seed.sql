@@ -23,10 +23,10 @@ INSERT INTO reservation_line (id, reservation_id, hotel_provider_room_type_id, b
 INSERT INTO reservation_line (id, reservation_id, hotel_provider_room_type_id, board_type_id, check_in_date, check_out_date, num_rooms, num_guests, price_per_night, board_price_per_night, num_nights, subtotal, tax_amount, margin_amount, discount_amount, total_price, currency_id, exchange_rate_id) VALUES
 (5, 5, 16, 4, '2025-12-22', '2025-12-29', 1, 2, 280.00, 60.00, 7, 2380.00, 252.00, 357.00, 0.00, 2989.00, 1, 1);
 
--- Juan: 3 nights suite + all inclusive at Hotel Marina Palma
+-- Juan: 3 nights suite + all inclusive at Hotel Marina Palma (promo WELCOME10 → 10% off)
 -- hprt_id=18 (Marina Palma suite, 380€/night), board_type=5 (all inclusive, 120€/night)
 INSERT INTO reservation_line (id, reservation_id, hotel_provider_room_type_id, board_type_id, check_in_date, check_out_date, num_rooms, num_guests, price_per_night, board_price_per_night, num_nights, subtotal, tax_amount, margin_amount, discount_amount, total_price, currency_id, exchange_rate_id) VALUES
-(6, 6, 18, 5, '2026-03-01', '2026-03-04', 1, 2, 380.00, 120.00, 3, 1500.00, 156.00, 225.00, 0.00, 1881.00, 1, 1);
+(6, 6, 18, 5, '2026-03-01', '2026-03-04', 1, 2, 380.00, 120.00, 3, 1500.00, 156.00, 225.00, 150.00, 1731.00, 1, 1);
 
 -- Oliver: 5 nights double room + B&B at Hotel Catedral Palma
 -- hprt_id=21 (Catedral Palma double, 145€/night), board_type=2 (B&B, 18€/night)
@@ -38,12 +38,22 @@ INSERT INTO reservation_line (id, reservation_id, hotel_provider_room_type_id, b
 INSERT INTO reservation_line (id, reservation_id, hotel_provider_room_type_id, board_type_id, check_in_date, check_out_date, num_rooms, num_guests, price_per_night, board_price_per_night, num_nights, subtotal, tax_amount, margin_amount, discount_amount, total_price, currency_id, exchange_rate_id) VALUES
 (8, 8, 24, 1, '2026-02-10', '2026-02-12', 1, 2, 70.00, 0.00, 2, 140.00, 18.00, 21.00, 0.00, 179.00, 1, 1);
 
--- Emma: 4 nights junior suite + half board at Hotel Santa Catalina
+-- Emma: 4 nights junior suite + half board at Hotel Santa Catalina (promo VIP2026 → 15% off)
 -- hprt_id=28 (Santa Catalina jr_suite, 210€/night), board_type=3 (half board, 40€/night)
 INSERT INTO reservation_line (id, reservation_id, hotel_provider_room_type_id, board_type_id, check_in_date, check_out_date, num_rooms, num_guests, price_per_night, board_price_per_night, num_nights, subtotal, tax_amount, margin_amount, discount_amount, total_price, currency_id, exchange_rate_id) VALUES
-(9, 9, 28, 3, '2026-03-10', '2026-03-14', 1, 1, 210.00, 40.00, 4, 1000.00, 108.00, 150.00, 0.00, 1258.00, 2, 2);
+(9, 9, 28, 3, '2026-03-10', '2026-03-14', 1, 1, 210.00, 40.00, 4, 1000.00, 108.00, 150.00, 150.00, 1108.00, 2, 2);
 
 -- Friedrich: 6 nights deluxe room + all inclusive at Hotel Son Vida Palace
 -- hprt_id=31 (Son Vida Palace deluxe, 550€/night), board_type=5 (all inclusive, 130€/night)
 INSERT INTO reservation_line (id, reservation_id, hotel_provider_room_type_id, board_type_id, check_in_date, check_out_date, num_rooms, num_guests, price_per_night, board_price_per_night, num_nights, subtotal, tax_amount, margin_amount, discount_amount, total_price, currency_id, exchange_rate_id) VALUES
 (10, 10, 31, 5, '2026-01-25', '2026-01-31', 1, 2, 550.00, 130.00, 6, 4080.00, 420.00, 612.00, 0.00, 5112.00, 1, 1);
+
+-- Sofia (cancelled): 3 nights double room only at Hotel Bahía Alcúdia
+-- hprt_id=33 (Bahía Alcúdia double, 140€/night), board_type=1 (room only, 0€)
+INSERT INTO reservation_line (id, reservation_id, hotel_provider_room_type_id, board_type_id, check_in_date, check_out_date, num_rooms, num_guests, price_per_night, board_price_per_night, num_nights, subtotal, tax_amount, margin_amount, discount_amount, total_price, currency_id, exchange_rate_id) VALUES
+(11, 11, 33, 1, '2026-02-01', '2026-02-04', 1, 2, 140.00, 0.00, 3, 420.00, 42.00, 63.00, 0.00, 525.00, 1, 1);
+
+-- Hans (cancelled): 2 nights single + B&B at Hotel Promenade Nice
+-- hprt_id=60 (Promenade Nice single, 150€/night), board_type=2 (B&B, 30€/night)
+INSERT INTO reservation_line (id, reservation_id, hotel_provider_room_type_id, board_type_id, check_in_date, check_out_date, num_rooms, num_guests, price_per_night, board_price_per_night, num_nights, subtotal, tax_amount, margin_amount, discount_amount, total_price, currency_id, exchange_rate_id) VALUES
+(12, 12, 60, 2, '2026-02-10', '2026-02-12', 1, 1, 150.00, 30.00, 2, 360.00, 36.00, 36.00, 0.00, 432.00, 1, 1);

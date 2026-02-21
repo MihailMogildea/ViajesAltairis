@@ -4,6 +4,7 @@ public record CancellationDto(
     long Id,
     long ReservationId,
     long CancelledByUserId,
+    string CancelledByUserEmail,
     string? Reason,
     decimal PenaltyPercentage,
     decimal PenaltyAmount,

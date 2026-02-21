@@ -53,7 +53,7 @@ public class GetSubscriptionPlansHandler : IRequestHandler<GetSubscriptionPlansQ
 
         var plans = (await connection.QueryAsync<SubscriptionPlanDto>(sql)).ToList();
 
-        if (langId != 1 && plans.Count > 0)
+        if (plans.Count > 0)
         {
             var ids = plans.Select(p => p.Id).ToList();
             var names = await _translationService.ResolveAsync("subscription_type", ids, langId, "name", cancellationToken);

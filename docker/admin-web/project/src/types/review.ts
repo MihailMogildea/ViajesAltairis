@@ -2,6 +2,7 @@ export interface ReviewDto {
   id: number;
   reservationId: number;
   userId: number;
+  userEmail: string;
   hotelId: number;
   rating: number;
   title: string | null;
@@ -15,6 +16,7 @@ export interface ReviewResponseDto {
   id: number;
   reviewId: number;
   userId: number;
+  userEmail: string;
   comment: string;
   createdAt: string;
 }

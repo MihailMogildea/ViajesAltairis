@@ -20,7 +20,8 @@ public class GetReservationDetailHandler : IRequestHandler<GetReservationDetailQ
         if (result == null)
             throw new KeyNotFoundException($"Reservation {request.ReservationId} not found.");
 
-        if (result.BookedByUserId != _currentUser.UserId!.Value)
+        var userId = _currentUser.UserId!.Value;
+        if (result.BookedByUserId != userId && result.OwnerUserId != userId)
             throw new UnauthorizedAccessException("This reservation does not belong to you.");
 
         return new GetReservationDetailResponse

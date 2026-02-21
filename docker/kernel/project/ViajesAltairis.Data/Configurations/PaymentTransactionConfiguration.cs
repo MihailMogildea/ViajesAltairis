@@ -17,7 +17,7 @@ public class PaymentTransactionConfiguration : IEntityTypeConfiguration<PaymentT
         builder.Property(e => e.Amount).HasColumnName("amount").HasColumnType("decimal(10,2)").IsRequired();
         builder.Property(e => e.CurrencyId).HasColumnName("currency_id").IsRequired();
         builder.Property(e => e.ExchangeRateId).HasColumnName("exchange_rate_id").IsRequired();
-        builder.Property(e => e.Status).HasColumnName("status").HasMaxLength(50).IsRequired();
+        builder.Property(e => e.StatusId).HasColumnName("status_id").IsRequired();
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamp").HasDefaultValueSql("CURRENT_TIMESTAMP");
         builder.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasColumnType("timestamp").HasDefaultValueSql("CURRENT_TIMESTAMP").ValueGeneratedOnAddOrUpdate();
 

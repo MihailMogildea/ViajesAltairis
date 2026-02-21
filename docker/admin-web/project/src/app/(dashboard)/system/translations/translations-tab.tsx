@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { TranslationDto, LanguageDto } from "@/types/system";
 import { DataTable, Column } from "@/components/data-table";
 import { FormModal } from "@/components/form-modal";
@@ -29,6 +29,11 @@ export function TranslationsTab({
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => {
+    const map: Record<string, boolean> = {};
+    for (const item of initial) map[item.entityType] = true;
+    return map;
+  });
 
   const [formEntityType, setFormEntityType] = useState("");
   const [formEntityId, setFormEntityId] = useState<number>(0);
@@ -37,6 +42,22 @@ export function TranslationsTab({
   const [formValue, setFormValue] = useState("");
 
   const dismissMessage = useCallback(() => setMessage(null), []);
+
+  // Group items by entityType
+  const grouped = useMemo(() => {
+    const map = new Map<string, TranslationDto[]>();
+    for (const item of items) {
+      const group = map.get(item.entityType) ?? [];
+      group.push(item);
+      map.set(item.entityType, group);
+    }
+    // Sort groups alphabetically
+    return [...map.entries()].sort(([a], [b]) => a.localeCompare(b));
+  }, [items]);
+
+  function toggleGroup(key: string) {
+    setCollapsed((prev) => ({ ...prev, [key]: !prev[key] }));
+  }
 
   function buildPayload() {
     return {
@@ -118,7 +139,6 @@ export function TranslationsTab({
 
   const columns: Column<TranslationDto>[] = [
     { key: "id", header: "ID", className: "w-16" },
-    { key: "entityType", header: t["admin.label.entity_type"] ?? "Entity Type" },
     { key: "entityId", header: t["admin.label.entity_id"] ?? "Entity ID", className: "w-24" },
     { key: "field", header: t["admin.label.field"] ?? "Field" },
     {
@@ -151,28 +171,62 @@ export function TranslationsTab({
         }
       />
 
-      <DataTable
-        columns={columns}
-        data={items}
-        keyField="id"
-        emptyMessage={t["admin.label.no_data"] ?? "No translations found."}
-        actions={(item) => (
-          <>
-            <button
-              onClick={() => openEdit(item)}
-              className="rounded border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
-            >
-              {t["admin.action.edit"] ?? "Edit"}
-            </button>
-            <button
-              onClick={() => setDeleting(item)}
-              className="rounded border border-red-300 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-50"
-            >
-              {t["admin.action.delete"] ?? "Delete"}
-            </button>
-          </>
-        )}
-      />
+      {grouped.length === 0 ? (
+        <div className="rounded-lg border border-gray-200 bg-white p-8 text-center text-sm text-gray-500">
+          {t["admin.label.no_data"] ?? "No translations found."}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {grouped.map(([entityType, groupItems]) => (
+            <div key={entityType} className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+              <button
+                onClick={() => toggleGroup(entityType)}
+                className="flex w-full items-center justify-between bg-gray-50 px-4 py-3 text-left hover:bg-gray-100"
+              >
+                <span className="text-sm font-semibold text-gray-800">
+                  {entityType}
+                  <span className="ml-2 text-xs font-normal text-gray-400">
+                    ({groupItems.length})
+                  </span>
+                </span>
+                <svg
+                  className={`h-4 w-4 text-gray-400 transition-transform ${collapsed[entityType] ? "" : "rotate-180"}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {!collapsed[entityType] && (
+                <DataTable
+                  columns={columns}
+                  data={groupItems}
+                  keyField="id"
+                  emptyMessage=""
+                  actions={(item) => (
+                    <>
+                      <button
+                        onClick={() => openEdit(item)}
+                        className="rounded border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                      >
+                        {t["admin.action.edit"] ?? "Edit"}
+                      </button>
+                      <button
+                        onClick={() => setDeleting(item)}
+                        className="rounded border border-red-300 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-50"
+                      >
+                        {t["admin.action.delete"] ?? "Delete"}
+                      </button>
+                    </>
+                  )}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       <FormModal
         open={showCreate || !!editing}

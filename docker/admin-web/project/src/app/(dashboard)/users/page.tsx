@@ -5,7 +5,7 @@ import { getSession } from "@/lib/auth";
 import { getAccessLevel } from "@/lib/permissions";
 import { UsersTable } from "./users-table";
 import type { UserDto, UserTypeDto } from "@/types/user";
-import type { LanguageDto } from "@/types/system";
+import type { LanguageDto, TranslationDto } from "@/types/system";
 
 export default async function UsersPage() {
   const session = await getSession();
@@ -16,16 +16,26 @@ export default async function UsersPage() {
   let users: UserDto[] = [];
   let userTypes: UserTypeDto[] = [];
   let languages: LanguageDto[] = [];
+  let translations: TranslationDto[] = [];
   let error: string | null = null;
 
   try {
-    [users, userTypes, languages] = await Promise.all([
+    [users, userTypes, languages, translations] = await Promise.all([
       apiFetch<UserDto[]>("/api/Users", { cache: "no-store" }),
       apiFetch<UserTypeDto[]>("/api/UserTypes", { cache: "no-store" }),
       apiFetch<LanguageDto[]>("/api/Languages", { cache: "no-store" }),
+      apiFetch<TranslationDto[]>("/api/Translations", { cache: "no-store" }),
     ]);
   } catch (e) {
     error = e instanceof Error ? e.message : "Failed to load users";
+  }
+
+  const langId = languages.find((l) => l.isoCode === locale)?.id ?? 1;
+  const utNames: Record<number, string> = {};
+  for (const tr of translations) {
+    if (tr.entityType === "user_type" && tr.field === "name" && tr.languageId === langId) {
+      utNames[tr.entityId] = tr.value;
+    }
   }
 
   return (
@@ -46,6 +56,7 @@ export default async function UsersPage() {
           users={users}
           userTypes={userTypes}
           languages={languages}
+          utNames={utNames}
           t={t}
           access={access}
         />

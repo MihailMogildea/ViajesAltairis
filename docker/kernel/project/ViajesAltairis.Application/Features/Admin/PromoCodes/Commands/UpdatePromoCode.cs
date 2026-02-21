@@ -31,6 +31,6 @@ public class UpdatePromoCodeHandler : IRequestHandler<UpdatePromoCodeCommand, Pr
         entity.MaxUses = request.MaxUses;
         await _repository.UpdateAsync(entity, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-        return new PromoCodeDto(entity.Id, entity.Code, entity.DiscountPercentage, entity.DiscountAmount, entity.CurrencyId, entity.ValidFrom, entity.ValidTo, entity.MaxUses, entity.CurrentUses, entity.Enabled, entity.CreatedAt, entity.UpdatedAt);
+        return new PromoCodeDto { Id = entity.Id, Code = entity.Code, DiscountPercentage = entity.DiscountPercentage, DiscountAmount = entity.DiscountAmount, CurrencyId = entity.CurrencyId, ValidFrom = entity.ValidFrom, ValidTo = entity.ValidTo, MaxUses = entity.MaxUses, CurrentUses = entity.CurrentUses, Enabled = entity.Enabled, CreatedAt = entity.CreatedAt, UpdatedAt = entity.UpdatedAt };
     }
 }

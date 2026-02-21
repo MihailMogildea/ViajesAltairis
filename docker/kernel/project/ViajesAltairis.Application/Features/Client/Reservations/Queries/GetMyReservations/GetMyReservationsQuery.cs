@@ -23,4 +23,5 @@ public class ReservationSummaryDto
     public decimal TotalAmount { get; set; }
     public string Currency { get; set; } = string.Empty;
     public int LineCount { get; set; }
+    public string? HotelNames { get; set; }
 }

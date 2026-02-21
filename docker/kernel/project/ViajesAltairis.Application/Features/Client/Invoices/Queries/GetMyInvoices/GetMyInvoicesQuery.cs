@@ -18,6 +18,7 @@ public class InvoiceSummaryDto
 {
     public long Id { get; set; }
     public string InvoiceNumber { get; set; } = string.Empty;
+    public long StatusId { get; set; }
     public string Status { get; set; } = string.Empty;
     public decimal TotalAmount { get; set; }
     public string Currency { get; set; } = string.Empty;

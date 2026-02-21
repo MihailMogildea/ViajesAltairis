@@ -16,11 +16,14 @@ public class GetPaymentTransactionByIdHandler : IRequestHandler<GetPaymentTransa
     {
         using var connection = _db.CreateConnection();
         return await connection.QuerySingleOrDefaultAsync<PaymentTransactionDto>(
-            @"SELECT id AS Id, reservation_id AS ReservationId, payment_method_id AS PaymentMethodId,
-                     transaction_reference AS TransactionReference, amount AS Amount,
-                     currency_id AS CurrencyId, exchange_rate_id AS ExchangeRateId,
-                     status AS Status, created_at AS CreatedAt, updated_at AS UpdatedAt
-              FROM payment_transaction WHERE id = @Id",
+            @"SELECT pt.id AS Id, pt.reservation_id AS ReservationId, pt.payment_method_id AS PaymentMethodId,
+                     pt.transaction_reference AS TransactionReference, pt.amount AS Amount,
+                     pt.currency_id AS CurrencyId, c.iso_code AS CurrencyCode,
+                     pt.exchange_rate_id AS ExchangeRateId,
+                     pt.status_id AS StatusId, pt.created_at AS CreatedAt, pt.updated_at AS UpdatedAt
+              FROM payment_transaction pt
+              JOIN currency c ON c.id = pt.currency_id
+              WHERE pt.id = @Id",
             new { request.Id });
     }
 }

@@ -16,9 +16,11 @@ public class GetReviewsHandler : IRequestHandler<GetReviewsQuery, IEnumerable<Re
     {
         using var connection = _db.CreateConnection();
         return await connection.QueryAsync<ReviewDto>(
-            @"SELECT id AS Id, reservation_id AS ReservationId, user_id AS UserId, hotel_id AS HotelId,
-                     rating AS Rating, title AS Title, comment AS Comment, visible AS Visible,
-                     created_at AS CreatedAt, updated_at AS UpdatedAt
-              FROM review ORDER BY created_at DESC");
+            @"SELECT r.id AS Id, r.reservation_id AS ReservationId, r.user_id AS UserId, u.email AS UserEmail,
+                     r.hotel_id AS HotelId, r.rating AS Rating, r.title AS Title, r.comment AS Comment,
+                     r.visible AS Visible, r.created_at AS CreatedAt, r.updated_at AS UpdatedAt
+              FROM review r
+              JOIN user u ON u.id = r.user_id
+              ORDER BY r.created_at DESC");
     }
 }

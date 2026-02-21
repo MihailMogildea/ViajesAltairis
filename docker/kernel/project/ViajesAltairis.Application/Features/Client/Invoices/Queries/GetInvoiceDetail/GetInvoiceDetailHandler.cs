@@ -7,11 +7,16 @@ public class GetInvoiceDetailHandler : IRequestHandler<GetInvoiceDetailQuery, Ge
 {
     private readonly IReservationApiClient _reservationApi;
     private readonly ICurrentUserService _currentUser;
+    private readonly ITranslationService _translationService;
 
-    public GetInvoiceDetailHandler(IReservationApiClient reservationApi, ICurrentUserService currentUser)
+    public GetInvoiceDetailHandler(
+        IReservationApiClient reservationApi,
+        ICurrentUserService currentUser,
+        ITranslationService translationService)
     {
         _reservationApi = reservationApi;
         _currentUser = currentUser;
+        _translationService = translationService;
     }
 
     public async Task<GetInvoiceDetailResponse> Handle(GetInvoiceDetailQuery request, CancellationToken cancellationToken)
@@ -22,11 +27,18 @@ public class GetInvoiceDetailHandler : IRequestHandler<GetInvoiceDetailQuery, Ge
         if (result == null)
             throw new KeyNotFoundException($"Invoice {request.InvoiceId} not found.");
 
+        var status = result.Status;
+        var langId = _currentUser.LanguageId;
+        var statusNames = await _translationService.ResolveAsync(
+            "invoice_status", [result.StatusId], langId, "name", cancellationToken);
+        if (statusNames.TryGetValue(result.StatusId, out var translatedStatus))
+            status = translatedStatus;
+
         return new GetInvoiceDetailResponse
         {
             Id = result.Id,
             InvoiceNumber = result.InvoiceNumber,
-            Status = result.Status,
+            Status = status,
             SubTotal = result.SubTotal,
             TaxAmount = result.TaxAmount,
             TotalAmount = result.TotalAmount,

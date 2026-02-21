@@ -11,13 +11,14 @@ public class RoleAuthorizationMiddleware
     private static readonly Dictionary<string, Dictionary<string, string>> SectionAccess = new()
     {
         ["system"] = new() { ["admin"] = "full" },
+        ["reference"] = new() { ["admin"] = "full", ["manager"] = "read", ["agent"] = "read", ["hotel_staff"] = "read" },
         ["hotels"] = new() { ["admin"] = "full", ["manager"] = "read", ["agent"] = "read", ["hotel_staff"] = "own" },
-        ["providers"] = new() { ["admin"] = "full" },
+        ["providers"] = new() { ["admin"] = "full", ["manager"] = "read", ["agent"] = "read", ["hotel_staff"] = "read" },
         ["reservations"] = new() { ["admin"] = "full", ["manager"] = "full", ["agent"] = "own", ["hotel_staff"] = "own" },
-        ["users"] = new() { ["admin"] = "full", ["manager"] = "read" },
-        ["business-partners"] = new() { ["admin"] = "full", ["manager"] = "read", ["agent"] = "own" },
+        ["users"] = new() { ["admin"] = "full", ["manager"] = "read", ["agent"] = "read", ["hotel_staff"] = "read" },
+        ["business-partners"] = new() { ["admin"] = "full", ["manager"] = "read", ["agent"] = "own", ["hotel_staff"] = "own" },
         ["pricing"] = new() { ["admin"] = "full", ["manager"] = "read" },
-        ["subscriptions"] = new() { ["admin"] = "full", ["manager"] = "read", ["agent"] = "read" },
+        ["subscriptions"] = new() { ["admin"] = "full", ["manager"] = "read", ["agent"] = "read", ["hotel_staff"] = "read" },
         ["financial"] = new() { ["admin"] = "full", ["manager"] = "read", ["agent"] = "own", ["hotel_staff"] = "own" },
         ["operations"] = new() { ["admin"] = "full", ["manager"] = "full", ["hotel_staff"] = "own" },
         ["reviews"] = new() { ["admin"] = "full", ["manager"] = "full", ["hotel_staff"] = "own" },
@@ -28,19 +29,22 @@ public class RoleAuthorizationMiddleware
     // Route prefix → section mapping (order matters — first match wins)
     private static readonly (string Prefix, string Section)[] RouteMappings =
     [
-        // system
+        // system (admin-only configuration)
         ("/api/job-schedules", "system"),
-        ("/api/currencies", "system"),
-        ("/api/exchangerates", "system"),
-        ("/api/languages", "system"),
-        ("/api/countries", "system"),
-        ("/api/administrativedivision", "system"),  // covers both /administrativedivisions and /administrativedivisiontypes
-        ("/api/cities", "system"),
-        ("/api/translations", "system"),
+        ("/api/administrativedivisiontypes", "system"),
+        ("/api/administrativedivisions", "reference"),
         ("/api/webtranslations", "system"),
-        ("/api/providertypes", "system"),
         ("/api/emailtemplates", "system"),
         ("/api/notificationlogs", "system"),
+
+        // reference (lookup data needed by all roles)
+        ("/api/cities", "reference"),
+        ("/api/currencies", "reference"),
+        ("/api/exchangerates", "reference"),
+        ("/api/languages", "reference"),
+        ("/api/countries", "reference"),
+        ("/api/translations", "reference"),
+        ("/api/providertypes", "reference"),
 
         // hotels
         ("/api/hotels", "hotels"),
@@ -119,8 +123,8 @@ public class RoleAuthorizationMiddleware
     {
         var path = context.Request.Path.Value?.ToLowerInvariant() ?? "";
 
-        // Skip auth endpoints, swagger, and public web translations (GET only)
-        if (path.StartsWith("/api/auth") || path.StartsWith("/swagger")
+        // Skip auth endpoints, swagger, metrics, and public web translations (GET only)
+        if (path.StartsWith("/api/auth") || path.StartsWith("/swagger") || path == "/metrics"
             || (path.StartsWith("/api/webtranslations") && context.Request.Method == HttpMethods.Get))
         {
             await _next(context);
@@ -152,6 +156,19 @@ public class RoleAuthorizationMiddleware
             context.Response.ContentType = "application/json";
             await context.Response.WriteAsync(JsonSerializer.Serialize(new { error = "Access denied." }));
             return;
+        }
+
+        // B2B agents (with business_partner_id) are restricted to a subset of sections
+        if (role == "agent" && context.User.FindFirst("business_partner_id")?.Value is not null)
+        {
+            var b2bDenied = new[] { "users", "business-partners", "subscriptions", "financial" };
+            if (b2bDenied.Contains(section))
+            {
+                context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsync(JsonSerializer.Serialize(new { error = "Access denied." }));
+                return;
+            }
         }
 
         if (!SectionAccess.TryGetValue(section, out var roleAccess) ||

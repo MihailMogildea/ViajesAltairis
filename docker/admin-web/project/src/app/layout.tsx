@@ -5,6 +5,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "ViajesAltairis Admin",
   description: "Admin dashboard for ViajesAltairis",
+  icons: { icon: "/logo.jpg" },
 };
 
 export default async function RootLayout({

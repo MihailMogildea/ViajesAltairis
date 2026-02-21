@@ -87,7 +87,7 @@ function resolveDestination(dest: string): { cityId?: number; countryId?: number
 
 function HotelsContent() {
   const searchParams = useSearchParams();
-  const { t } = useLocale();
+  const { locale, t } = useLocale();
 
   const [destination, setDestination] = useState(searchParams.get("destination") || "");
   const [checkIn, setCheckIn] = useState(searchParams.get("checkIn") || "");
@@ -117,6 +117,7 @@ function HotelsContent() {
         checkOut: checkOut || undefined,
         guests: guests || undefined,
         stars: stars.length > 0 ? stars : undefined,
+        amenityIds: selectedAmenities.length > 0 ? selectedAmenities : undefined,
         page,
         pageSize: perPage,
       });
@@ -126,7 +127,7 @@ function HotelsContent() {
       // API unavailable — will fall back to mock data
       setApiHotels(null);
     }
-  }, [destination, checkIn, checkOut, guests, stars, page]);
+  }, [destination, checkIn, checkOut, guests, stars, selectedAmenities, page, locale]);
 
   useEffect(() => {
     fetchFromApi();
@@ -144,10 +145,22 @@ function HotelsContent() {
     return sortHotels(f, sortBy);
   }, [destination, stars, minPrice, maxPrice, selectedAmenities, sortBy]);
 
+  // Apply client-side price filters and sorting to API results
+  // Note: amenity filtering is skipped for API results because the search API
+  // does not return amenity data in hotel summaries
+  const apiFiltered = useMemo(() => {
+    if (!apiHotels) return [];
+    const f = filterHotels(apiHotels, {
+      minPrice: minPrice || undefined,
+      maxPrice: maxPrice || undefined,
+    });
+    return sortHotels(f, sortBy);
+  }, [apiHotels, minPrice, maxPrice, sortBy]);
+
   // Use API data if available, otherwise fall back to mock
   const useApi = apiHotels !== null;
-  const displayHotels = useApi ? apiHotels : paginate(filtered, page, perPage).items;
-  const total = useApi ? apiTotal : filtered.length;
+  const displayHotels = useApi ? apiFiltered : paginate(filtered, page, perPage).items;
+  const total = useApi ? apiFiltered.length : filtered.length;
   const totalPages = Math.ceil(total / perPage);
 
   function handleSearch(dest: string, ci: string, co: string, g: number) {
@@ -200,7 +213,6 @@ function HotelsContent() {
             <option value="rating">{t("client.hotels.top_rated")}</option>
             <option value="price_asc">{t("client.hotels.price_low")}</option>
             <option value="price_desc">{t("client.hotels.price_high")}</option>
-            <option value="stars">{t("client.hotels.star_rating")}</option>
           </select>
         </div>
       </div>
@@ -256,7 +268,7 @@ function HotelsContent() {
           ) : (
             <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
               {displayHotels.map((hotel) => (
-                <HotelCard key={hotel.id} hotel={hotel} />
+                <HotelCard key={hotel.id} hotel={hotel} checkIn={checkIn} checkOut={checkOut} guests={guests} />
               ))}
             </div>
           )}

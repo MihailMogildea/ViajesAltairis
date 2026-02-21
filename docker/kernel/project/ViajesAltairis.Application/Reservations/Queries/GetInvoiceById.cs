@@ -21,7 +21,7 @@ public class GetInvoiceByIdHandler : IRequestHandler<GetInvoiceByIdQuery, Invoic
         var invoice = await Dapper.SqlMapper.QuerySingleOrDefaultAsync<dynamic>(
             connection,
             """
-            SELECT i.id, i.invoice_number, ins.name AS status,
+            SELECT i.id, i.invoice_number, i.status_id, ins.name AS status,
                    i.subtotal, i.tax_amount, i.total_amount,
                    c.iso_code AS currency, er.rate_to_eur AS exchange_rate_to_eur,
                    i.created_at, i.updated_at, i.reservation_id
@@ -30,7 +30,7 @@ public class GetInvoiceByIdHandler : IRequestHandler<GetInvoiceByIdQuery, Invoic
             JOIN invoice_status ins ON ins.id = i.status_id
             JOIN currency c ON c.id = r.currency_id
             JOIN exchange_rate er ON er.id = r.exchange_rate_id
-            WHERE i.id = @InvoiceId AND r.booked_by_user_id = @UserId
+            WHERE i.id = @InvoiceId AND (r.booked_by_user_id = @UserId OR r.owner_user_id = @UserId)
             """,
             new { request.InvoiceId, request.UserId });
 
@@ -39,6 +39,7 @@ public class GetInvoiceByIdHandler : IRequestHandler<GetInvoiceByIdQuery, Invoic
         return new InvoiceDetailResult(
             (long)invoice.id,
             (string)invoice.invoice_number,
+            (long)invoice.status_id,
             (string)invoice.status,
             (decimal)invoice.subtotal,
             (decimal)invoice.tax_amount,

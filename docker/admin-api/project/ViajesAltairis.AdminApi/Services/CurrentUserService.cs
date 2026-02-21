@@ -44,6 +44,15 @@ public class CurrentUserService : ICurrentUserService
         }
     }
 
+    public long? BusinessPartnerId
+    {
+        get
+        {
+            var bp = User?.FindFirstValue("business_partner_id");
+            return long.TryParse(bp, out var id) ? id : null;
+        }
+    }
+
     public long LanguageId
     {
         get

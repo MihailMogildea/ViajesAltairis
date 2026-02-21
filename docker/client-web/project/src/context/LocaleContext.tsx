@@ -42,8 +42,8 @@ const FALLBACK_LANGUAGES: ApiLanguage[] = [
 
 const FALLBACK_CURRENCIES: ApiCurrency[] = [
   { id: 1, code: "EUR", name: "Euro", symbol: "€", exchangeRateToEur: 1 },
-  { id: 2, code: "GBP", name: "British Pound", symbol: "£", exchangeRateToEur: 0.86 },
-  { id: 3, code: "USD", name: "US Dollar", symbol: "$", exchangeRateToEur: 1.08 },
+  { id: 2, code: "GBP", name: "British Pound", symbol: "£", exchangeRateToEur: 1.163 },
+  { id: 3, code: "USD", name: "US Dollar", symbol: "$", exchangeRateToEur: 0.926 },
 ];
 
 const LocaleContext = createContext<LocaleState>({

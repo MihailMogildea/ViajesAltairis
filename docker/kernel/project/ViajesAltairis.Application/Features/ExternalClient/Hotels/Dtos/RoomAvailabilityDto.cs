@@ -1,10 +1,12 @@
 namespace ViajesAltairis.Application.Features.ExternalClient.Hotels.Dtos;
 
-public record RoomAvailabilityDto(
-    long HotelProviderRoomTypeId,
-    string RoomTypeName,
-    string ProviderName,
-    int TotalRooms,
-    decimal PricePerNight,
-    string CurrencyCode,
-    int AvailableRooms);
+public class RoomAvailabilityDto
+{
+    public long HotelProviderRoomTypeId { get; set; }
+    public string RoomTypeName { get; set; } = string.Empty;
+    public string ProviderName { get; set; } = string.Empty;
+    public int TotalRooms { get; set; }
+    public decimal PricePerNight { get; set; }
+    public string CurrencyCode { get; set; } = string.Empty;
+    public int AvailableRooms { get; set; }
+}

@@ -21,7 +21,7 @@ public class GetReservationByIdHandler : IRequestHandler<GetReservationByIdQuery
         var reservation = await Dapper.SqlMapper.QuerySingleOrDefaultAsync<dynamic>(
             connection,
             """
-            SELECT r.id, r.booked_by_user_id, rs.name AS status, r.created_at, r.total_price, r.discount_amount,
+            SELECT r.id, r.booked_by_user_id, r.owner_user_id, rs.name AS status, r.created_at, r.total_price, r.discount_amount,
                    c.iso_code AS currency_code, er.rate_to_eur AS exchange_rate, pc.code AS promo_code
             FROM reservation r
             JOIN reservation_status rs ON rs.id = r.status_id
@@ -67,9 +67,9 @@ public class GetReservationByIdHandler : IRequestHandler<GetReservationByIdQuery
                 (string)line.hotel_name,
                 (string)line.room_type,
                 (string)line.board_type,
-                ((DateOnly)line.check_in).ToDateTime(TimeOnly.MinValue),
-                ((DateOnly)line.check_out).ToDateTime(TimeOnly.MinValue),
-                (int)line.guest_count,
+                ((DateTime)line.check_in),
+                ((DateTime)line.check_out),
+                Convert.ToInt32(line.guest_count),
                 (decimal)line.line_total,
                 guestResults));
         }
@@ -77,6 +77,7 @@ public class GetReservationByIdHandler : IRequestHandler<GetReservationByIdQuery
         return new ReservationDetailResult(
             (long)reservation.id,
             (long)reservation.booked_by_user_id,
+            reservation.owner_user_id as long?,
             (string)reservation.status,
             (DateTime)reservation.created_at,
             (decimal)reservation.total_price,

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useLocale } from "@/context/LocaleContext";
 
@@ -11,7 +12,10 @@ export default function Footer() {
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
         <div className="grid gap-8 sm:grid-cols-3">
           <div>
-            <h3 className="text-sm font-semibold text-gray-900">ViajesAltairis</h3>
+            <div className="flex items-center gap-2">
+              <Image src="/logo.jpg" alt="ViajesAltairis" width={28} height={28} className="rounded" />
+              <h3 className="text-sm font-semibold text-gray-900">ViajesAltairis</h3>
+            </div>
             <p className="mt-2 text-sm text-gray-500">
               {t("client.footer.description")}
             </p>

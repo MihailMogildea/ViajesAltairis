@@ -33,8 +33,11 @@ builder.Services.AddSingleton<IProviderRepository, ProviderRepository>();
 builder.Services.AddSingleton<IHotelSyncRepository, HotelSyncRepository>();
 
 // Redis
-var redisConnectionString = builder.Configuration["Redis:ConnectionString"] ?? "localhost:6379";
-builder.Services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect(redisConnectionString));
+if (!builder.Environment.IsEnvironment("Testing"))
+{
+    var redisConnectionString = builder.Configuration["Redis:ConnectionString"] ?? "localhost:6379";
+    builder.Services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect(redisConnectionString));
+}
 
 // Services
 builder.Services.AddSingleton<SyncService>();

@@ -44,6 +44,6 @@ public class CreateUserHandler : IRequestHandler<CreateUserCommand, UserDto>
         };
         await _repository.AddAsync(entity, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-        return new UserDto(entity.Id, entity.UserTypeId, entity.Email, entity.FirstName, entity.LastName, entity.Phone, entity.TaxId, entity.Address, entity.City, entity.PostalCode, entity.Country, entity.LanguageId, entity.BusinessPartnerId, entity.ProviderId, entity.Discount, entity.Enabled, entity.CreatedAt);
+        return new UserDto { Id = entity.Id, UserTypeId = entity.UserTypeId, Email = entity.Email, FirstName = entity.FirstName, LastName = entity.LastName, Phone = entity.Phone, TaxId = entity.TaxId, Address = entity.Address, City = entity.City, PostalCode = entity.PostalCode, Country = entity.Country, LanguageId = entity.LanguageId, BusinessPartnerId = entity.BusinessPartnerId, ProviderId = entity.ProviderId, Discount = entity.Discount, Enabled = entity.Enabled, CreatedAt = entity.CreatedAt };
     }
 }

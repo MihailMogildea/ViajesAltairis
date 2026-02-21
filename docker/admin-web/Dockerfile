@@ -2,9 +2,10 @@ FROM node:22-alpine AS base
 
 # --- Dependencies ---
 FROM base AS deps
+RUN apk add --no-cache libc6-compat
 WORKDIR /app
-COPY project/package.json project/package-lock.json* ./
-RUN npm ci
+COPY project/package.json ./
+RUN npm install
 
 # --- Build ---
 FROM base AS builder

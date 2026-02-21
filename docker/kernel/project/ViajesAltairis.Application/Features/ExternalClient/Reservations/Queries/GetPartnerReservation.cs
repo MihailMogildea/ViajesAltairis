@@ -87,21 +87,50 @@ public class GetPartnerReservationHandler : IRequestHandler<GetPartnerReservatio
             header.CreatedAt, lineDtos);
     }
 
-    private record ReservationHeaderRow(
-        long ReservationId, string ReservationCode, string StatusName,
-        string OwnerFirstName, string OwnerLastName, string OwnerEmail,
-        string? OwnerPhone, string? OwnerTaxId,
-        decimal Subtotal, decimal TaxAmount, decimal DiscountAmount,
-        decimal TotalPrice, string CurrencyCode, string? PromoCode, string? Notes,
-        DateTime CreatedAt);
+    private class ReservationHeaderRow
+    {
+        public long ReservationId { get; set; }
+        public string ReservationCode { get; set; } = string.Empty;
+        public string StatusName { get; set; } = string.Empty;
+        public string OwnerFirstName { get; set; } = string.Empty;
+        public string OwnerLastName { get; set; } = string.Empty;
+        public string OwnerEmail { get; set; } = string.Empty;
+        public string? OwnerPhone { get; set; }
+        public string? OwnerTaxId { get; set; }
+        public decimal Subtotal { get; set; }
+        public decimal TaxAmount { get; set; }
+        public decimal DiscountAmount { get; set; }
+        public decimal TotalPrice { get; set; }
+        public string CurrencyCode { get; set; } = string.Empty;
+        public string? PromoCode { get; set; }
+        public string? Notes { get; set; }
+        public DateTime CreatedAt { get; set; }
+    }
 
-    private record LineRow(
-        long ReservationLineId, string HotelName, string RoomTypeName, string BoardTypeName,
-        DateOnly CheckInDate, DateOnly CheckOutDate,
-        int NumRooms, int NumGuests, decimal PricePerNight, decimal BoardPricePerNight,
-        int NumNights, decimal TotalPrice, string CurrencyCode);
+    private class LineRow
+    {
+        public long ReservationLineId { get; set; }
+        public string HotelName { get; set; } = string.Empty;
+        public string RoomTypeName { get; set; } = string.Empty;
+        public string BoardTypeName { get; set; } = string.Empty;
+        public DateOnly CheckInDate { get; set; }
+        public DateOnly CheckOutDate { get; set; }
+        public int NumRooms { get; set; }
+        public int NumGuests { get; set; }
+        public decimal PricePerNight { get; set; }
+        public decimal BoardPricePerNight { get; set; }
+        public int NumNights { get; set; }
+        public decimal TotalPrice { get; set; }
+        public string CurrencyCode { get; set; } = string.Empty;
+    }
 
-    private record GuestRow(
-        long GuestId, long ReservationLineId, string FirstName, string LastName,
-        string? Email, string? Phone);
+    private class GuestRow
+    {
+        public long GuestId { get; set; }
+        public long ReservationLineId { get; set; }
+        public string FirstName { get; set; } = string.Empty;
+        public string LastName { get; set; } = string.Empty;
+        public string? Email { get; set; }
+        public string? Phone { get; set; }
+    }
 }

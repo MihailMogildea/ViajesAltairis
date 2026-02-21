@@ -16,8 +16,11 @@ public class GetAuditLogsHandler : IRequestHandler<GetAuditLogsQuery, IEnumerabl
     {
         using var connection = _db.CreateConnection();
         return await connection.QueryAsync<AuditLogDto>(
-            @"SELECT id AS Id, user_id AS UserId, entity_type AS EntityType, entity_id AS EntityId,
-                     action AS Action, old_values AS OldValues, new_values AS NewValues, created_at AS CreatedAt
-              FROM audit_log ORDER BY created_at DESC");
+            @"SELECT a.id AS Id, a.user_id AS UserId, u.email AS UserEmail,
+                     a.entity_type AS EntityType, a.entity_id AS EntityId,
+                     a.action AS Action, a.old_values AS OldValues, a.new_values AS NewValues, a.created_at AS CreatedAt
+              FROM audit_log a
+              LEFT JOIN user u ON u.id = a.user_id
+              ORDER BY a.created_at DESC");
     }
 }

@@ -43,7 +43,7 @@ export function AuditTable({
             <th className="px-4 py-3">{t["admin.field.entityType"] ?? "Entity Type"}</th>
             <th className="px-4 py-3">{t["admin.field.entityId"] ?? "Entity ID"}</th>
             <th className="px-4 py-3">{t["admin.field.action"] ?? "Action"}</th>
-            <th className="px-4 py-3">{t["admin.field.userId"] ?? "User ID"}</th>
+            <th className="px-4 py-3">{t["admin.field.userEmail"] ?? "User"}</th>
             <th className="px-4 py-3">{t["admin.field.createdAt"] ?? "Created"}</th>
           </tr>
         </thead>
@@ -92,7 +92,7 @@ export function AuditTable({
                       {log.action}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-gray-500">{log.userId ?? "\u2014"}</td>
+                  <td className="px-4 py-3 text-gray-500">{log.userEmail ?? "\u2014"}</td>
                   <td className="px-4 py-3 text-xs text-gray-500">
                     {new Date(log.createdAt).toLocaleString()}
                   </td>

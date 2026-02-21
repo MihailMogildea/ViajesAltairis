@@ -23,6 +23,27 @@ export async function toggleReviewVisibility(
   });
 }
 
+export async function createReviewResponse(
+  reviewId: number,
+  userId: number,
+  comment: string
+): Promise<ReviewResponseDto> {
+  return apiFetch<ReviewResponseDto>("/api/ReviewResponses", {
+    method: "POST",
+    body: JSON.stringify({ reviewId, userId, comment }),
+  });
+}
+
+export async function updateReviewResponse(
+  id: number,
+  comment: string
+): Promise<ReviewResponseDto> {
+  return apiFetch<ReviewResponseDto>(`/api/ReviewResponses/${id}`, {
+    method: "PUT",
+    body: JSON.stringify({ comment }),
+  });
+}
+
 export async function deleteReviewResponse(id: number): Promise<void> {
   await apiFetch(`/api/ReviewResponses/${id}`, {
     method: "DELETE",

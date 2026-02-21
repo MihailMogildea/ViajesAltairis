@@ -26,6 +26,8 @@ public class GetMySubscriptionHandlerTests
         currentUser.UserId.Returns(8L);
         currentUser.LanguageId.Returns(1L);
         var translationService = Substitute.For<ITranslationService>();
+        translationService.ResolveAsync(Arg.Any<string>(), Arg.Any<IEnumerable<long>>(), Arg.Any<long>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new Dictionary<long, string>());
 
         var handler = new GetMySubscriptionHandler(factory, currentUser, translationService);
         var result = await handler.Handle(new GetMySubscriptionQuery(), CancellationToken.None);

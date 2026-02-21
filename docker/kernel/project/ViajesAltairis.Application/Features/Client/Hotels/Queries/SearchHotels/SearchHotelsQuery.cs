@@ -10,6 +10,7 @@ public class SearchHotelsQuery : IRequest<SearchHotelsResponse>
     public DateTime? CheckOut { get; set; }
     public int? Guests { get; set; }
     public int? Stars { get; set; }
+    public List<long>? AmenityIds { get; set; }
     public int Page { get; set; } = 1;
     public int PageSize { get; set; } = 20;
 }
@@ -29,6 +30,7 @@ public class HotelSummaryDto
     public int Stars { get; set; }
     public long CityId { get; set; }
     public string City { get; set; } = string.Empty;
+    public string? CityImageUrl { get; set; }
     public long CountryId { get; set; }
     public string Country { get; set; } = string.Empty;
     public decimal AvgRating { get; set; }

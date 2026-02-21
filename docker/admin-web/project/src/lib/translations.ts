@@ -1,20 +1,7 @@
 import type { Locale } from "./locale";
 
-interface WebTranslationDto {
-  id: number;
-  translationKey: string;
-  languageId: number;
-  value: string;
-}
-
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_ADMIN_API_URL ?? "http://admin-api:8080";
-
-/** Language IDs matching DB seed: en=1, es=2 */
-const LOCALE_TO_LANGUAGE_ID: Record<Locale, number> = {
-  en: 1,
-  es: 2,
-};
 
 /**
  * Fetch web translations from the public (no-auth) endpoint and return
@@ -23,22 +10,14 @@ const LOCALE_TO_LANGUAGE_ID: Record<Locale, number> = {
 export async function loadTranslations(
   locale: Locale
 ): Promise<Record<string, string>> {
-  const langId = LOCALE_TO_LANGUAGE_ID[locale];
-
   try {
     const res = await fetch(`${API_BASE_URL}/api/webtranslations/public`, {
-      next: { revalidate: 60 },
+      cache: "no-store",
+      headers: { "Accept-Language": locale },
     });
     if (!res.ok) return {};
 
-    const all = (await res.json()) as WebTranslationDto[];
-    const map: Record<string, string> = {};
-    for (const item of all) {
-      if (item.languageId === langId) {
-        map[item.translationKey] = item.value;
-      }
-    }
-    return map;
+    return (await res.json()) as Record<string, string>;
   } catch {
     // If API is down, return empty — UI will fall back to keys
     return {};

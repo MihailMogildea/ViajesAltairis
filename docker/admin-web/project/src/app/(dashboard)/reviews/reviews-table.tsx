@@ -1,10 +1,11 @@
 "use client";
 
 import { Fragment, useState } from "react";
-import { toggleReviewVisibility, deleteReviewResponse } from "./actions";
+import { toggleReviewVisibility, deleteReviewResponse, createReviewResponse, updateReviewResponse } from "./actions";
 import type { Column } from "@/components/data-table";
 import { StatusBadge } from "@/components/status-badge";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { FormModal } from "@/components/form-modal";
 import { ToastMessage } from "@/components/toast-message";
 import type { ReviewDto, ReviewResponseDto } from "@/types/review";
 
@@ -22,11 +23,13 @@ export function ReviewsTable({
   reviews: initial,
   responses: initialResponses,
   access,
+  currentUserId,
   t,
 }: {
   reviews: ReviewDto[];
   responses: ReviewResponseDto[];
   access: string | null;
+  currentUserId: number;
   t: Record<string, string>;
 }) {
   const [items, setItems] = useState(initial);
@@ -35,6 +38,12 @@ export function ReviewsTable({
   const [pending, setPending] = useState<number | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<ReviewResponseDto | null>(null);
+
+  // Reply / Edit modal state
+  const [replyReviewId, setReplyReviewId] = useState<number | null>(null);
+  const [editingResponse, setEditingResponse] = useState<ReviewResponseDto | null>(null);
+  const [commentText, setCommentText] = useState("");
+  const [modalPending, setModalPending] = useState(false);
 
   const isFull = access === "full";
 
@@ -76,6 +85,49 @@ export function ReviewsTable({
     }
   }
 
+  function openReply(reviewId: number) {
+    setReplyReviewId(reviewId);
+    setEditingResponse(null);
+    setCommentText("");
+    setExpandedId(reviewId);
+  }
+
+  function openEdit(resp: ReviewResponseDto) {
+    setEditingResponse(resp);
+    setReplyReviewId(null);
+    setCommentText(resp.comment);
+  }
+
+  function closeModal() {
+    setReplyReviewId(null);
+    setEditingResponse(null);
+    setCommentText("");
+  }
+
+  async function handleSaveModal() {
+    if (!commentText.trim()) return;
+    setModalPending(true);
+    setMessage(null);
+    try {
+      if (replyReviewId) {
+        const created = await createReviewResponse(replyReviewId, currentUserId, commentText.trim());
+        setResponses((prev) => [...prev, created]);
+        setMessage(t["admin.reviews.reply_saved"] ?? "Reply saved.");
+      } else if (editingResponse) {
+        const updated = await updateReviewResponse(editingResponse.id, commentText.trim());
+        setResponses((prev) =>
+          prev.map((r) => (r.id === updated.id ? updated : r))
+        );
+        setMessage(t["admin.reviews.response_updated"] ?? "Response updated.");
+      }
+      closeModal();
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : "Save failed");
+    } finally {
+      setModalPending(false);
+    }
+  }
+
   function toggleExpand(reviewId: number) {
     setExpandedId((prev) => (prev === reviewId ? null : reviewId));
   }
@@ -83,7 +135,7 @@ export function ReviewsTable({
   const columns: Column<ReviewDto>[] = [
     { key: "id", header: "ID", className: "w-16" },
     { key: "hotelId", header: t["admin.field.hotelId"] ?? "Hotel ID", className: "w-24" },
-    { key: "userId", header: t["admin.field.userId"] ?? "User ID", className: "w-24" },
+    { key: "userEmail", header: t["admin.field.userEmail"] ?? "User", className: "w-48" },
     {
       key: "rating",
       header: t["admin.field.rating"] ?? "Rating",
@@ -129,6 +181,11 @@ export function ReviewsTable({
     return { review, reviewResponses, isExpanded, hasResponses };
   });
 
+  const modalOpen = replyReviewId !== null || editingResponse !== null;
+  const modalTitle = replyReviewId
+    ? `${t["admin.reviews.reply_to"] ?? "Reply to Review"} #${replyReviewId}`
+    : `${t["admin.reviews.edit_response"] ?? "Edit Response"}`;
+
   return (
     <>
       <ToastMessage message={message} onDismiss={() => setMessage(null)} />
@@ -148,6 +205,7 @@ export function ReviewsTable({
                     {col.header}
                   </th>
                 ))}
+                {isFull && <th className="w-24 px-4 py-3" />}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -174,29 +232,49 @@ export function ReviewsTable({
                           : String((review as unknown as Record<string, unknown>)[col.key] ?? "")}
                       </td>
                     ))}
+                    {isFull && (
+                      <td className="px-4 py-3">
+                        {!hasResponses && (
+                          <button
+                            onClick={() => openReply(review.id)}
+                            className="rounded border border-blue-300 px-3 py-1 text-xs font-medium text-blue-700 hover:bg-blue-50"
+                          >
+                            {t["admin.reviews.reply"] ?? "Reply"}
+                          </button>
+                        )}
+                      </td>
+                    )}
                   </tr>
                   {isExpanded &&
                     reviewResponses.map((resp) => (
                       <tr key={`resp-${resp.id}`} className="bg-gray-50">
                         <td className="px-4 py-2" />
-                        <td colSpan={columns.length} className="px-4 py-2">
+                        <td colSpan={columns.length + (isFull ? 1 : 0)} className="px-4 py-2">
                           <div className="flex items-start justify-between gap-4">
                             <div>
                               <p className="text-sm text-gray-700">{resp.comment}</p>
                               <p className="mt-1 text-xs text-gray-400">
-                                {t["admin.field.userId"] ?? "User ID"}: {resp.userId}
+                                {resp.userEmail}
                                 {" · "}
                                 {new Date(resp.createdAt).toLocaleDateString()}
                               </p>
                             </div>
                             {isFull && (
-                              <button
-                                onClick={() => setDeleting(resp)}
-                                disabled={pending === resp.id}
-                                className="shrink-0 rounded border border-red-300 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
-                              >
-                                {t["admin.action.delete"] ?? "Delete"}
-                              </button>
+                              <div className="flex shrink-0 gap-2">
+                                <button
+                                  onClick={() => openEdit(resp)}
+                                  className="rounded border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100"
+                                >
+                                  {t["admin.action.edit"] ?? "Edit"}
+                                </button>
+                                <button
+                                  onClick={() => setDeleting(resp)}
+                                  disabled={pending === resp.id}
+                                  className="rounded border border-red-300 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+                                >
+                                  {t["admin.action.delete"] ?? "Delete"}
+                                </button>
+                              </div>
                             )}
                           </div>
                         </td>
@@ -208,6 +286,28 @@ export function ReviewsTable({
           </table>
         </div>
       )}
+
+      <FormModal
+        open={modalOpen}
+        title={modalTitle}
+        onClose={closeModal}
+        onSubmit={handleSaveModal}
+        loading={modalPending}
+        saveLabel={t["admin.action.save"] ?? "Save"}
+        cancelLabel={t["admin.action.cancel"] ?? "Cancel"}
+      >
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700">
+            {t["admin.field.comment"] ?? "Comment"}
+          </label>
+          <textarea
+            value={commentText}
+            onChange={(e) => setCommentText(e.target.value)}
+            rows={4}
+            className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          />
+        </div>
+      </FormModal>
 
       <ConfirmDialog
         open={!!deleting}

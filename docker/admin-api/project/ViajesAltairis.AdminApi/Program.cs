@@ -14,8 +14,12 @@ using ViajesAltairis.Data.Repositories;
 using ViajesAltairis.Domain.Interfaces;
 using ViajesAltairis.Infrastructure.Currency;
 using Prometheus;
+using QuestPDF.Infrastructure;
 using ViajesAltairis.Infrastructure.Cache;
 using ViajesAltairis.Infrastructure.Services;
+using ViajesAltairis.Infrastructure.Translations;
+
+QuestPDF.Settings.License = LicenseType.Community;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -60,6 +64,8 @@ builder.Services.Configure<EncryptionSettings>(builder.Configuration.GetSection(
 builder.Services.AddScoped<IEncryptionService, AesEncryptionService>();
 builder.Services.AddScoped<IPasswordService, BcryptPasswordService>();
 builder.Services.AddScoped<ICurrencyConverter, CurrencyConverter>();
+builder.Services.AddScoped<ITranslationService, TranslationService>();
+builder.Services.AddScoped<IInvoicePdfGenerator, InvoicePdfGenerator>();
 
 // JWT Authentication
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
@@ -98,10 +104,20 @@ builder.Services.AddHttpClient("ReservationsApi", client =>
 });
 builder.Services.AddScoped<IReservationApiClient, ReservationApiClient>();
 
+// Payment & provider services (needed for ConfirmBankTransfer flow)
+builder.Services.AddScoped<IPaymentService, ViajesAltairis.Infrastructure.Payment.PaymentService>();
+builder.Services.AddHttpClient<IProviderReservationService, ViajesAltairis.Infrastructure.Providers.ProviderReservationApiClient>(client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["ProvidersApi:BaseUrl"] ?? "http://providers-api:8080/");
+});
+
 // Controllers + Swagger
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.CustomSchemaIds(type => type.FullName);
+});
 
 var app = builder.Build();
 

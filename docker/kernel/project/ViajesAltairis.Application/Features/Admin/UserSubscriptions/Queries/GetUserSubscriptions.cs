@@ -15,13 +15,15 @@ public class GetUserSubscriptionsHandler : IRequestHandler<GetUserSubscriptionsQ
     public async Task<IEnumerable<UserSubscriptionDto>> Handle(GetUserSubscriptionsQuery request, CancellationToken cancellationToken)
     {
         using var connection = _db.CreateConnection();
-        var sql = @"SELECT id AS Id, user_id AS UserId, subscription_type_id AS SubscriptionTypeId,
-                           start_date AS StartDate, end_date AS EndDate, active AS Active,
-                           created_at AS CreatedAt, updated_at AS UpdatedAt
-                    FROM user_subscription";
+        var sql = @"SELECT us.id AS Id, us.user_id AS UserId, u.email AS UserEmail,
+                           us.subscription_type_id AS SubscriptionTypeId,
+                           us.start_date AS StartDate, us.end_date AS EndDate, us.active AS Active,
+                           us.created_at AS CreatedAt, us.updated_at AS UpdatedAt
+                    FROM user_subscription us
+                    JOIN user u ON u.id = us.user_id";
         if (request.UserId.HasValue)
-            sql += " WHERE user_id = @UserId";
-        sql += " ORDER BY created_at DESC";
+            sql += " WHERE us.user_id = @UserId";
+        sql += " ORDER BY us.created_at DESC";
         return await connection.QueryAsync<UserSubscriptionDto>(sql, new { request.UserId });
     }
 }

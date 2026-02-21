@@ -102,31 +102,6 @@ function LoginContent() {
         {t("client.login.no_account")}{" "}
         <Link href="/register" className="font-medium text-blue-600 hover:underline">{t("client.login.create_one")}</Link>
       </p>
-
-      <div className="mt-6 rounded-xl bg-gray-50 p-4">
-        <h3 className="text-sm font-semibold text-gray-700">{t("client.login.demo_accounts")}</h3>
-        <p className="mt-1 text-xs text-gray-400">{t("client.login.demo_password")}</p>
-        <ul className="mt-3 space-y-2 text-sm">
-          <li>
-            <button onClick={() => { setEmail("client1@example.com"); setPassword("password123"); }} className="text-blue-600 hover:underline">
-              client1@example.com
-            </button>
-            <span className="text-gray-400"> — {t("client.login.demo_juan")}</span>
-          </li>
-          <li>
-            <button onClick={() => { setEmail("client2@example.com"); setPassword("password123"); }} className="text-blue-600 hover:underline">
-              client2@example.com
-            </button>
-            <span className="text-gray-400"> — {t("client.login.demo_emma")}</span>
-          </li>
-          <li>
-            <button onClick={() => { setEmail("ana@viajessol.com"); setPassword("password123"); }} className="text-blue-600 hover:underline">
-              ana@viajessol.com
-            </button>
-            <span className="text-gray-400"> — {t("client.login.demo_ana")}</span>
-          </li>
-        </ul>
-      </div>
     </div>
   );
 }

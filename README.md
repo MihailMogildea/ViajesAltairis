@@ -150,6 +150,35 @@ ViajesAltairis/
 
 > **Internal services** (database, redis, reservations-api, providers-api, scheduled-api, prometheus) have no exposed host ports. They communicate over the `altairis-network` Docker bridge. To query Prometheus metrics, use Grafana's **Explore** mode.
 
+## Post-Startup Setup
+
+After `docker compose up -d`, the seed data includes internal provider hotels but **not** external provider catalogs or live exchange rates. To get the full experience:
+
+1. **Log in to admin-web** at http://localhost:3001 with `admin@altairis.com` / `password123`
+2. **Trigger the provider update job**: Go to **System > Jobs** and trigger `provider-update`. This syncs external provider catalogs (HotelBeds, Booking.com, TravelGate), creating multi-provider hotel entries with competitive pricing.
+3. **Trigger the exchange rate sync job**: Trigger `exchange-rate-sync` to fetch live EUR exchange rates from the ECB. Without this, non-EUR currency users will see EUR prices.
+
+After the provider sync, hotels like **Hotel Altairis Palma** will show multiple price options per room type from different providers, allowing users to compare offers.
+
+## Demo Users
+
+All seeded users share the password **`password123`** (bcrypt factor 10).
+
+| # | Email | Role | Name | Notes |
+|---|-------|------|------|-------|
+| 1 | `admin@altairis.com` | Admin | Carlos Administrador | Full system access |
+| 2 | `manager@altairis.com` | Manager | María García | |
+| 3 | `agent1@altairis.com` | Agent | Pedro López | |
+| 4 | `agent2@altairis.com` | Agent | Sophie Dupont | Based in Nice |
+| 5 | `regional.mallorca@altairis.com` | Hotel Staff | Antoni Barceló | Regional manager, linked to Mallorca provider |
+| 6 | `director.palma@altairis.com` | Hotel Staff | Marta Serra | Director of Hotel Altairis Palma |
+| 7 | `director.ibiza@altairis.com` | Hotel Staff | Tomás Tur | Director of Hotel Dalt Vila (Ibiza) |
+| 8 | `client1@example.com` | Client | Juan Martínez | Barcelona |
+| 9 | `client2@example.com` | Client | Emma Wilson | London |
+| 10 | `ana@viajessol.com` | Agent (B2B) | Ana Fernández | Viajes Sol partner (8% discount) |
+| 11 | `luis@viajessol.com` | Agent (B2B) | Luis Romero | Viajes Sol partner (8% discount) |
+| 12 | `james@medtours.co.uk` | Agent (B2B) | James Taylor | Mediterranean Tours partner (5% discount) |
+
 ## Scaling Considerations
 
 This setup runs all services as single containers on a single Docker host. It is designed as an **MVP** and will handle moderate traffic reliably. When traffic grows to the point where horizontal scaling is needed, the following adaptations are required:
@@ -195,3 +224,7 @@ All defined in `.env`:
 | `GRAFANA_ADMIN_PASSWORD` | Grafana admin login |
 
 > **Production:** Replace all values, use proper secret management (Vault, K8s Secrets, cloud KMS). Never commit real credentials.
+
+## Support
+
+For issues, questions, or contributions, please contact me via likedin mihail-mogildea.

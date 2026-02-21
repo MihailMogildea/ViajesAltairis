@@ -1,27 +1,31 @@
 "use server";
 
 import { apiFetch } from "@/lib/api";
-import { EmailTemplateDto } from "@/types/system";
+import { TranslationDto } from "@/types/system";
 
-export async function createEmailTemplate(
-  payload: { name: string }
-): Promise<EmailTemplateDto> {
-  return apiFetch<EmailTemplateDto>("/api/EmailTemplates", {
+interface TranslationPayload {
+  entityType: string;
+  entityId: number;
+  field: string;
+  languageId: number;
+  value: string;
+}
+
+export async function createTranslation(
+  payload: TranslationPayload
+): Promise<TranslationDto> {
+  return apiFetch<TranslationDto>("/api/Translations", {
     method: "POST",
     body: JSON.stringify(payload),
   });
 }
 
-export async function updateEmailTemplate(
+export async function updateTranslation(
   id: number,
-  payload: { name: string }
-): Promise<EmailTemplateDto> {
-  return apiFetch<EmailTemplateDto>(`/api/EmailTemplates/${id}`, {
+  payload: TranslationPayload
+): Promise<TranslationDto> {
+  return apiFetch<TranslationDto>(`/api/Translations/${id}`, {
     method: "PUT",
     body: JSON.stringify(payload),
   });
-}
-
-export async function deleteEmailTemplate(id: number): Promise<void> {
-  await apiFetch(`/api/EmailTemplates/${id}`, { method: "DELETE" });
 }

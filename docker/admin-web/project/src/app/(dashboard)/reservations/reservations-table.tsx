@@ -7,7 +7,8 @@ import { StatusBadge } from "@/components/status-badge";
 import { FormModal } from "@/components/form-modal";
 import { FormField } from "@/components/form-field";
 import { ToastMessage } from "@/components/toast-message";
-import { createReservation } from "./actions";
+import { createReservation, fetchReservation } from "./actions";
+import type { UserOption } from "./actions";
 import type {
   ReservationAdminDto,
   ReservationStatusDto,
@@ -16,8 +17,8 @@ import type {
 
 type Variant = "enabled" | "disabled" | "success" | "warning" | "danger" | "info";
 
-function statusVariant(statusName: string): Variant {
-  const lower = statusName.toLowerCase();
+function statusVariant(statusName: string | undefined): Variant {
+  const lower = (statusName ?? "").toLowerCase();
   if (lower.includes("draft")) return "info";
   if (lower.includes("pending")) return "warning";
   if (lower.includes("confirmed")) return "success";
@@ -45,11 +46,15 @@ const EMPTY_FORM: CreateReservationRequest = {
 export function ReservationsTable({
   reservations: initial,
   statuses,
+  users,
+  rsNames,
   access,
   t,
 }: {
   reservations: ReservationAdminDto[];
   statuses: ReservationStatusDto[];
+  users: UserOption[];
+  rsNames: Record<number, string>;
   access: string | null;
   t: Record<string, string>;
 }) {
@@ -59,6 +64,40 @@ export function ReservationsTable({
   const [form, setForm] = useState<CreateReservationRequest>({ ...EMPTY_FORM });
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+
+  function handleUserSelect(userId: number | null) {
+    if (!userId) {
+      setForm({
+        ...form,
+        ownerUserId: null,
+        ownerFirstName: null,
+        ownerLastName: null,
+        ownerEmail: null,
+        ownerPhone: null,
+        ownerTaxId: null,
+        ownerAddress: null,
+        ownerCity: null,
+        ownerPostalCode: null,
+        ownerCountry: null,
+      });
+      return;
+    }
+    const user = users.find((u) => u.id === userId);
+    if (!user) return;
+    setForm({
+      ...form,
+      ownerUserId: user.id,
+      ownerFirstName: user.firstName,
+      ownerLastName: user.lastName,
+      ownerEmail: user.email,
+      ownerPhone: user.phone,
+      ownerTaxId: user.taxId,
+      ownerAddress: user.address,
+      ownerCity: user.city,
+      ownerPostalCode: user.postalCode,
+      ownerCountry: user.country,
+    });
+  }
 
   const filtered = filterStatusId
     ? items.filter((r) => r.statusId === filterStatusId)
@@ -82,20 +121,27 @@ export function ReservationsTable({
       header: t["admin.reservations.col.status"] ?? "Status",
       render: (r) => (
         <StatusBadge variant={statusVariant(r.statusName)}>
-          {r.statusName}
+          {rsNames[r.statusId] ?? r.statusName}
         </StatusBadge>
       ),
     },
     {
       key: "owner",
       header: t["admin.reservations.col.owner"] ?? "Owner",
-      render: (r) => `${r.ownerFirstName} ${r.ownerLastName}`,
+      render: (r) => (
+        <div>
+          <div>{r.ownerFirstName} {r.ownerLastName}</div>
+          {r.ownerEmail && (
+            <div className="text-xs text-gray-500">{r.ownerEmail}</div>
+          )}
+        </div>
+      ),
     },
     {
       key: "totalPrice",
       header: t["admin.reservations.col.total"] ?? "Total",
       className: "text-right",
-      render: (r) => `${r.totalPrice.toFixed(2)} ${r.currencyCode}`,
+      render: (r) => `${(r.totalPrice ?? 0).toFixed(2)} ${r.currencyCode}`,
     },
     {
       key: "lineCount",
@@ -113,7 +159,7 @@ export function ReservationsTable({
     setPending(true);
     setMessage(null);
     try {
-      const created = await createReservation({
+      const id = await createReservation({
         ...form,
         promoCode: form.promoCode || null,
         ownerUserId: form.ownerUserId || null,
@@ -127,6 +173,7 @@ export function ReservationsTable({
         ownerPostalCode: form.ownerPostalCode || null,
         ownerCountry: form.ownerCountry || null,
       });
+      const created = await fetchReservation(Number(id));
       setItems((prev) => [created, ...prev]);
       setShowCreate(false);
       setForm({ ...EMPTY_FORM });
@@ -164,7 +211,7 @@ export function ReservationsTable({
                 : "bg-gray-100 text-gray-600 hover:bg-gray-200"
             }`}
           >
-            {s.name}
+            {rsNames[s.id] ?? s.name}
           </button>
         ))}
       </div>
@@ -211,12 +258,28 @@ export function ReservationsTable({
           value={form.promoCode ?? ""}
           onChange={(v) => setForm({ ...form, promoCode: String(v) || null })}
         />
-        <FormField
-          label={t["admin.reservations.field.owner_user_id"] ?? "Owner User ID"}
-          type="number"
-          value={form.ownerUserId ?? 0}
-          onChange={(v) => setForm({ ...form, ownerUserId: Number(v) || null })}
-        />
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700">
+            {t["admin.reservations.field.owner_user"] ?? "Owner User"}
+          </label>
+          <select
+            className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            value={form.ownerUserId ?? ""}
+            onChange={(e) => {
+              const val = e.target.value;
+              handleUserSelect(val ? Number(val) : null);
+            }}
+          >
+            <option value="">
+              {t["admin.reservations.field.walk_in"] ?? "(None - walk-in guest)"}
+            </option>
+            {users.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.email} — {u.firstName} {u.lastName}
+              </option>
+            ))}
+          </select>
+        </div>
         <FormField
           label={t["admin.reservations.field.first_name"] ?? "First Name"}
           value={form.ownerFirstName ?? ""}

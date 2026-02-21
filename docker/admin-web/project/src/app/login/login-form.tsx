@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useActionState } from "react";
 import { loginAction } from "@/lib/actions";
 
@@ -9,6 +10,9 @@ export function LoginForm({ t }: { t: Record<string, string> }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50">
       <div className="w-full max-w-sm rounded-lg border border-gray-200 bg-white p-8 shadow-sm">
+        <div className="mb-4 flex justify-center">
+          <Image src="/logo.jpg" alt="ViajesAltairis" width={80} height={80} className="rounded" />
+        </div>
         <h1 className="mb-6 text-center text-2xl font-bold text-gray-900">
           {t["admin.login.title"] ?? "ViajesAltairis"}
         </h1>

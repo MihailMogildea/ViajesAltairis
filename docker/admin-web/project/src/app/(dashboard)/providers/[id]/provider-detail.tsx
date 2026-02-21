@@ -93,6 +93,8 @@ export function ProviderDetail({
   hpRoomTypes: initialRTs,
   hpRoomTypeBoards: initialBoards,
   exchangeRates,
+  rtNames,
+  btNames,
   t,
   access,
 }: {
@@ -106,6 +108,8 @@ export function ProviderDetail({
   hpRoomTypes: HotelProviderRoomTypeDto[];
   hpRoomTypeBoards: HotelProviderRoomTypeBoardDto[];
   exchangeRates: ExchangeRateDto[];
+  rtNames: Record<number, string>;
+  btNames: Record<number, string>;
   t: Record<string, string>;
   access: AccessLevel | null;
 }) {
@@ -152,8 +156,8 @@ export function ProviderDetail({
 
   // Lookup maps
   const hotelMap = new Map(hotels.map((h) => [h.id, h.name]));
-  const roomTypeMap = new Map(roomTypes.map((rt) => [rt.id, rt.name]));
-  const boardTypeMap = new Map(boardTypes.map((bt) => [bt.id, bt.name]));
+  const roomTypeMap = new Map(roomTypes.map((rt) => [rt.id, rtNames[rt.id] ?? rt.name]));
+  const boardTypeMap = new Map(boardTypes.map((bt) => [bt.id, btNames[bt.id] ?? bt.name]));
   const currencyMap = new Map(currencies.map((c) => [c.id, c.isoCode]));
 
   const localizedTabs = TABS.map((tab) => ({
@@ -751,7 +755,7 @@ export function ProviderDetail({
               type="select"
               value={rtForm.roomTypeId}
               onChange={(v) => setRtForm((f) => ({ ...f, roomTypeId: Number(v) }))}
-              options={roomTypes.map((rt) => ({ value: rt.id, label: rt.name }))}
+              options={roomTypes.map((rt) => ({ value: rt.id, label: rtNames[rt.id] ?? rt.name }))}
               required
             />
             <FormField
@@ -836,7 +840,7 @@ export function ProviderDetail({
               type="select"
               value={boardForm.boardTypeId}
               onChange={(v) => setBoardForm((f) => ({ ...f, boardTypeId: Number(v) }))}
-              options={boardTypes.map((bt) => ({ value: bt.id, label: bt.name }))}
+              options={boardTypes.map((bt) => ({ value: bt.id, label: btNames[bt.id] ?? bt.name }))}
               required
             />
             <FormField

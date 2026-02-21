@@ -8,12 +8,11 @@ interface DestinationCardProps {
   name: string;
   country: string;
   hotelCount: number;
-  imageColor: string;
 }
 
-export default function DestinationCard({ name, country, hotelCount, imageColor }: DestinationCardProps) {
+export default function DestinationCard({ name, country, hotelCount }: DestinationCardProps) {
   const { t } = useLocale();
-  const text = encodeURIComponent(name);
+  const seed = name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
   return (
     <Link
       href={`/hotels?destination=${encodeURIComponent(name)}`}
@@ -21,7 +20,7 @@ export default function DestinationCard({ name, country, hotelCount, imageColor 
     >
       <div className="aspect-[4/3] w-full">
         <img
-          src={`https://placehold.co/400x300/${imageColor}/FFFFFF?text=${text}`}
+          src={`https://picsum.photos/seed/dest-${seed}/400/300`}
           alt={name}
           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
         />

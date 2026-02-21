@@ -76,6 +76,7 @@ export function UserDetail({
   userSubscriptions: initialUserSubscriptions,
   businessPartners,
   providers,
+  utNames,
   access,
   t,
 }: {
@@ -88,6 +89,7 @@ export function UserDetail({
   userSubscriptions: UserSubscriptionDto[];
   businessPartners: BusinessPartnerDto[];
   providers: ProviderDto[];
+  utNames: Record<number, string>;
   access: AccessLevel | null;
   t: Record<string, string>;
 }) {
@@ -121,6 +123,7 @@ export function UserDetail({
           languages={languages}
           businessPartners={businessPartners}
           providers={providers}
+          utNames={utNames}
           isFull={isFull}
           pending={pending}
           setPending={setPending}
@@ -167,6 +170,7 @@ function InfoTab({
   languages,
   businessPartners,
   providers,
+  utNames,
   isFull,
   pending,
   setPending,
@@ -179,6 +183,7 @@ function InfoTab({
   languages: LanguageDto[];
   businessPartners: BusinessPartnerDto[];
   providers: ProviderDto[];
+  utNames: Record<number, string>;
   isFull: boolean;
   pending: boolean;
   setPending: (v: boolean) => void;
@@ -225,7 +230,7 @@ function InfoTab({
           type="select"
           value={form.userTypeId}
           onChange={(v) => setForm((f) => ({ ...f, userTypeId: Number(v) }))}
-          options={userTypes.map((ut) => ({ value: ut.id, label: ut.name }))}
+          options={userTypes.map((ut) => ({ value: ut.id, label: utNames[ut.id] ?? ut.name }))}
           disabled={!isFull}
         />
         <FormField

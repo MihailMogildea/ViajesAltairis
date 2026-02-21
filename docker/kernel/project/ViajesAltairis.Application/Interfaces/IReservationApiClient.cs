@@ -25,6 +25,8 @@ public interface IReservationApiClient
     Task<InvoiceListResult> GetInvoicesByUserAsync(long userId, int page, int pageSize, CancellationToken cancellationToken = default);
     Task<InvoiceDetailResult?> GetInvoiceByIdAsync(long invoiceId, long userId, CancellationToken cancellationToken = default);
     Task<ReservationLineInfoResult?> GetReservationLineInfoAsync(long reservationLineId, CancellationToken cancellationToken = default);
+    Task<InvoiceDetailResult> CreateInvoiceAsync(long reservationId, long userId, CancellationToken cancellationToken = default);
+    Task<byte[]?> GetInvoicePdfAsync(long invoiceId, long userId, long? languageId = null, CancellationToken cancellationToken = default);
 }
 
 public record SubmitResult(long ReservationId, string Status, decimal TotalAmount, string CurrencyCode);
@@ -32,6 +34,7 @@ public record SubmitResult(long ReservationId, string Status, decimal TotalAmoun
 public record ReservationDetailResult(
     long Id,
     long BookedByUserId,
+    long? OwnerUserId,
     string Status,
     DateTime CreatedAt,
     decimal TotalAmount,
@@ -62,13 +65,15 @@ public record ReservationSummaryResult(
     DateTime CreatedAt,
     decimal TotalAmount,
     string CurrencyCode,
-    int LineCount);
+    int LineCount,
+    string? HotelNames = null);
 
 public record InvoiceListResult(List<InvoiceSummaryResult> Invoices, int TotalCount);
 
 public record InvoiceSummaryResult(
     long Id,
     string InvoiceNumber,
+    long StatusId,
     string Status,
     decimal TotalAmount,
     string Currency,
@@ -77,6 +82,7 @@ public record InvoiceSummaryResult(
 public record InvoiceDetailResult(
     long Id,
     string InvoiceNumber,
+    long StatusId,
     string Status,
     decimal SubTotal,
     decimal TaxAmount,

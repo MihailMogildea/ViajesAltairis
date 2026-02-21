@@ -25,9 +25,13 @@ public class RoomAvailabilityDto
     public string? Summary { get; set; }
     public int MaxGuests { get; set; }
     public int AvailableRooms { get; set; }
+    public decimal BasePricePerNight { get; set; }
     public string CurrencyCode { get; set; } = string.Empty;
+    [JsonIgnore] public decimal ProviderMargin { get; set; }
+    [JsonIgnore] public decimal HotelMargin { get; set; }
     [JsonIgnore] public long ProviderTypeId { get; set; }
     [JsonIgnore] public long ProviderId { get; set; }
+    public List<string> Images { get; set; } = new();
     public List<BoardOptionDto> BoardOptions { get; set; } = new();
 }
 

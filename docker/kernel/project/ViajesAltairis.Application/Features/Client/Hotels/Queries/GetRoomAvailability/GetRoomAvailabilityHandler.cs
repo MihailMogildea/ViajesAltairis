@@ -2,6 +2,7 @@ using Dapper;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using ViajesAltairis.Application.Interfaces;
+using ViajesAltairis.Domain.Enums;
 
 namespace ViajesAltairis.Application.Features.Client.Hotels.Queries.GetRoomAvailability;
 
@@ -51,9 +52,12 @@ public class GetRoomAvailabilityHandler : IRequestHandler<GetRoomAvailabilityQue
                 rc.hotel_provider_room_type_id AS RoomTypeId,
                 rc.room_type_id AS RoomTypeDbId,
                 rc.room_type_name AS RoomTypeName,
+                rc.price_per_night AS BasePricePerNight,
                 rc.capacity AS MaxGuests,
                 rc.quantity AS AvailableRooms,
                 rc.currency_code AS CurrencyCode,
+                rc.provider_margin AS ProviderMargin,
+                rc.hotel_margin AS HotelMargin,
                 rc.provider_type_id AS ProviderTypeId,
                 rc.provider_id AS ProviderId
             FROM v_hotel_room_catalog rc
@@ -66,6 +70,43 @@ public class GetRoomAvailabilityHandler : IRequestHandler<GetRoomAvailabilityQue
         var rooms = (await connection.QueryAsync<RoomAvailabilityDto>(
             roomsSql,
             new { request.HotelId, request.Guests })).ToList();
+
+        // Subtract rooms booked by active reservations for the requested date range
+        if (rooms.Count > 0)
+        {
+            var checkIn = DateOnly.FromDateTime(request.CheckIn);
+            var checkOut = DateOnly.FromDateTime(request.CheckOut);
+            var roomIds = rooms.Select(r => r.RoomTypeId).ToList();
+
+            const string bookedSql = """
+                SELECT rl.hotel_provider_room_type_id AS RoomTypeId,
+                       COALESCE(SUM(rl.num_rooms), 0) AS BookedRooms
+                FROM reservation_line rl
+                JOIN reservation r ON r.id = rl.reservation_id
+                WHERE rl.hotel_provider_room_type_id IN @RoomIds
+                  AND r.status_id NOT IN (@Completed, @Cancelled)
+                  AND rl.check_in_date < @CheckOut AND rl.check_out_date > @CheckIn
+                GROUP BY rl.hotel_provider_room_type_id
+                """;
+
+            var booked = await connection.QueryAsync<(long RoomTypeId, int BookedRooms)>(
+                bookedSql,
+                new
+                {
+                    RoomIds = roomIds,
+                    CheckIn = checkIn,
+                    CheckOut = checkOut,
+                    Completed = (long)ReservationStatusEnum.Completed,
+                    Cancelled = (long)ReservationStatusEnum.Cancelled
+                });
+
+            var bookedMap = booked.ToDictionary(b => b.RoomTypeId, b => b.BookedRooms);
+            foreach (var room in rooms)
+                if (bookedMap.TryGetValue(room.RoomTypeId, out var count))
+                    room.AvailableRooms = Math.Max(0, room.AvailableRooms - count);
+
+            rooms.RemoveAll(r => r.AvailableRooms <= 0);
+        }
 
         var hasExternalProviders = rooms.Any(r => r.ProviderTypeId == 2);
 
@@ -102,6 +143,23 @@ public class GetRoomAvailabilityHandler : IRequestHandler<GetRoomAvailabilityQue
                     }).ToList()
                     : [];
             }
+
+            // Room images
+            const string imagesSql = """
+                SELECT hotel_provider_room_type_id AS RoomTypeId, url AS Url
+                FROM room_image
+                WHERE hotel_provider_room_type_id IN @RoomIds
+                ORDER BY sort_order, id
+                """;
+
+            var images = await connection.QueryAsync<RoomImageRow>(imagesSql, new { RoomIds = roomIds });
+            var imagesByRoom = images
+                .GroupBy(i => i.RoomTypeId)
+                .ToDictionary(g => g.Key, g => g.Select(i => i.Url).ToList());
+
+            foreach (var room in rooms)
+                room.Images = imagesByRoom.TryGetValue(room.RoomTypeId, out var roomImages)
+                    ? roomImages : [];
 
             // Overlay live availability for external provider rooms
             if (hasExternalProviders)
@@ -145,6 +203,71 @@ public class GetRoomAvailabilityHandler : IRequestHandler<GetRoomAvailabilityQue
                 }
             }
 
+            // Currency conversion BEFORE margins (matches AddReservationLineHandler order)
+            var sourceCurrencyCode = rooms.First().CurrencyCode;
+            if (!string.IsNullOrEmpty(sourceCurrencyCode)
+                && sourceCurrencyCode != currency)
+            {
+                var currencyIds = await connection.QueryAsync<(long Id, string IsoCode)>(
+                    "SELECT id, iso_code FROM currency WHERE iso_code IN @Codes",
+                    new { Codes = new[] { sourceCurrencyCode, currency } });
+                var lookup = currencyIds.ToDictionary(c => c.IsoCode, c => c.Id);
+
+                if (lookup.TryGetValue(sourceCurrencyCode, out var sourceId)
+                    && lookup.TryGetValue(currency, out var targetId))
+                {
+                    var (factor, _) = await _currencyConverter.ConvertAsync(
+                        1m, sourceId, targetId, cancellationToken);
+                    foreach (var room in rooms)
+                    {
+                        room.BasePricePerNight = Math.Round(room.BasePricePerNight * factor, 2);
+                        foreach (var bo in room.BoardOptions)
+                            bo.PricePerNight = Math.Round(bo.PricePerNight * factor, 2);
+                    }
+                }
+            }
+
+            // Seasonal margin lookup
+            var checkIn = DateOnly.FromDateTime(request.CheckIn);
+            var checkOut = DateOnly.FromDateTime(request.CheckOut);
+            var adminDivId = await connection.ExecuteScalarAsync<long?>(
+                """
+                SELECT c.administrative_division_id
+                FROM hotel h JOIN city c ON c.id = h.city_id
+                WHERE h.id = @HotelId
+                """,
+                new { request.HotelId });
+
+            decimal seasonalMarginPct = 0;
+            if (adminDivId.HasValue)
+            {
+                var checkInMmDd = checkIn.ToString("MM-dd");
+                var checkOutMmDd = checkOut.ToString("MM-dd");
+                seasonalMarginPct = await connection.ExecuteScalarAsync<decimal?>(
+                    """
+                    SELECT sm.margin FROM seasonal_margin sm
+                    WHERE sm.administrative_division_id = @AdminDivId
+                      AND (
+                        CASE WHEN sm.start_month_day <= sm.end_month_day THEN
+                          @CheckInMmDd <= sm.end_month_day AND @CheckOutMmDd >= sm.start_month_day
+                        ELSE
+                          @CheckInMmDd >= sm.start_month_day OR @CheckOutMmDd <= sm.end_month_day
+                        END
+                      )
+                    ORDER BY sm.margin DESC LIMIT 1
+                    """,
+                    new { AdminDivId = adminDivId.Value, CheckInMmDd = checkInMmDd, CheckOutMmDd = checkOutMmDd }) ?? 0;
+            }
+
+            // Apply provider + hotel + seasonal margins to converted prices
+            foreach (var room in rooms)
+            {
+                var marginFactor = 1 + (room.ProviderMargin + room.HotelMargin + seasonalMarginPct) / 100m;
+                room.BasePricePerNight = Math.Round(room.BasePricePerNight * marginFactor, 2);
+                foreach (var bo in room.BoardOptions)
+                    bo.PricePerNight = Math.Round(bo.PricePerNight * marginFactor, 2);
+            }
+
             // Translations
             var hprtSummaries = await _translationService.ResolveAsync(
                 "hotel_provider_room_type", roomIds, langId, "summary", cancellationToken);
@@ -152,57 +275,29 @@ public class GetRoomAvailabilityHandler : IRequestHandler<GetRoomAvailabilityQue
                 if (hprtSummaries.TryGetValue(room.RoomTypeId, out var s))
                     room.Summary = s;
 
-            if (langId != 1)
+            var rtIds = rooms.Select(r => r.RoomTypeDbId).Distinct().ToList();
+            var rtNames = await _translationService.ResolveAsync(
+                "room_type", rtIds, langId, "name", cancellationToken);
+            foreach (var room in rooms)
+                if (rtNames.TryGetValue(room.RoomTypeDbId, out var n))
+                    room.RoomTypeName = n;
+
+            var btIds = rooms.SelectMany(r => r.BoardOptions)
+                .Select(b => b.BoardTypeId).Distinct().ToList();
+            if (btIds.Count > 0)
             {
-                var rtIds = rooms.Select(r => r.RoomTypeDbId).Distinct().ToList();
-                var rtNames = await _translationService.ResolveAsync(
-                    "room_type", rtIds, langId, "name", cancellationToken);
+                var btNames = await _translationService.ResolveAsync(
+                    "board_type", btIds, langId, "name", cancellationToken);
                 foreach (var room in rooms)
-                    if (rtNames.TryGetValue(room.RoomTypeDbId, out var n))
-                        room.RoomTypeName = n;
-
-                var btIds = rooms.SelectMany(r => r.BoardOptions)
-                    .Select(b => b.BoardTypeId).Distinct().ToList();
-                if (btIds.Count > 0)
-                {
-                    var btNames = await _translationService.ResolveAsync(
-                        "board_type", btIds, langId, "name", cancellationToken);
-                    foreach (var room in rooms)
-                        foreach (var bo in room.BoardOptions)
-                            if (btNames.TryGetValue(bo.BoardTypeId, out var bn))
-                                bo.BoardTypeName = bn;
-                }
-            }
-        }
-
-        // Currency conversion
-        var targetCurrency = _currentUserService.CurrencyCode;
-        if (rooms.Count > 0)
-        {
-            var sourceCurrencyCode = rooms.First().CurrencyCode;
-            if (!string.IsNullOrEmpty(sourceCurrencyCode)
-                && sourceCurrencyCode != targetCurrency)
-            {
-                var currencyIds = await connection.QueryAsync<(long Id, string IsoCode)>(
-                    "SELECT id, iso_code FROM currency WHERE iso_code IN @Codes",
-                    new { Codes = new[] { sourceCurrencyCode, targetCurrency } });
-                var lookup = currencyIds.ToDictionary(c => c.IsoCode, c => c.Id);
-
-                if (lookup.TryGetValue(sourceCurrencyCode, out var sourceId)
-                    && lookup.TryGetValue(targetCurrency, out var targetId))
-                {
-                    var (factor, _) = await _currencyConverter.ConvertAsync(
-                        1m, sourceId, targetId, cancellationToken);
-                    foreach (var room in rooms)
-                        foreach (var bo in room.BoardOptions)
-                            bo.PricePerNight = Math.Round(bo.PricePerNight * factor, 2);
-                }
+                    foreach (var bo in room.BoardOptions)
+                        if (btNames.TryGetValue(bo.BoardTypeId, out var bn))
+                            bo.BoardTypeName = bn;
             }
         }
 
         var response = new GetRoomAvailabilityResponse
         {
-            Rooms = rooms, CurrencyCode = targetCurrency
+            Rooms = rooms, CurrencyCode = currency
         };
         var cacheTtl = hasExternalProviders
             ? TimeSpan.FromMinutes(2)
@@ -234,4 +329,6 @@ public class GetRoomAvailabilityHandler : IRequestHandler<GetRoomAvailabilityQue
     private record BoardOptionRow(
         long RoomTypeId, long BoardTypeId,
         string BoardTypeName, decimal PricePerNight);
+
+    private record RoomImageRow(long RoomTypeId, string Url);
 }

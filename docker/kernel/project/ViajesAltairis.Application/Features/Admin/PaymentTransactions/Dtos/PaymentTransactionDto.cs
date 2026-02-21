@@ -7,7 +7,8 @@ public record PaymentTransactionDto(
     string TransactionReference,
     decimal Amount,
     long CurrencyId,
+    string CurrencyCode,
     long ExchangeRateId,
-    string Status,
+    long StatusId,
     DateTime CreatedAt,
     DateTime UpdatedAt);

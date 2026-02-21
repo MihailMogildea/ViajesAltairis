@@ -42,7 +42,7 @@ CREATE INDEX idx_user_subscription_active ON user_subscription (user_id, active)
 -- =====================
 CREATE INDEX idx_invoice_status_created ON invoice (status_id, created_at DESC);
 CREATE INDEX idx_invoice_business_partner_period ON invoice (business_partner_id, period_start DESC);
-CREATE INDEX idx_payment_transaction_status ON payment_transaction (status);
+CREATE INDEX idx_payment_transaction_status ON payment_transaction (status_id);
 CREATE INDEX idx_payment_transaction_reference ON payment_transaction (transaction_reference);
 CREATE INDEX idx_payment_transaction_created ON payment_transaction (created_at DESC);
 

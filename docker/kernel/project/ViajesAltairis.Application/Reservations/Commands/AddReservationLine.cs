@@ -21,17 +21,20 @@ public class AddReservationLineHandler : IRequestHandler<AddReservationLineComma
     private readonly IDbConnectionFactory _connectionFactory;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrencyConverter _currencyConverter;
+    private readonly ICacheService _cacheService;
 
     public AddReservationLineHandler(
         IReservationRepository reservationRepository,
         IDbConnectionFactory connectionFactory,
         IUnitOfWork unitOfWork,
-        ICurrencyConverter currencyConverter)
+        ICurrencyConverter currencyConverter,
+        ICacheService cacheService)
     {
         _reservationRepository = reservationRepository;
         _connectionFactory = connectionFactory;
         _unitOfWork = unitOfWork;
         _currencyConverter = currencyConverter;
+        _cacheService = cacheService;
     }
 
     public async Task<long> Handle(AddReservationLineCommand request, CancellationToken cancellationToken)
@@ -258,6 +261,9 @@ public class AddReservationLineHandler : IRequestHandler<AddReservationLineComma
         reservation.TotalPrice = reservation.ReservationLines.Sum(l => l.TotalPrice) - promoFixedAmount;
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        // Invalidate cached room availability for this hotel
+        await _cacheService.RemoveByPrefixAsync($"hotel:rooms:{(long)roomConfig.hotel_id}:", cancellationToken);
 
         return line.Id;
     }

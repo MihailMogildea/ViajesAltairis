@@ -33,6 +33,11 @@ public class CreateSubscriptionTypeHandler : IRequestHandler<CreateSubscriptionT
         };
         await _repository.AddAsync(entity, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-        return new SubscriptionTypeDto(entity.Id, entity.Name, entity.PricePerMonth, entity.Discount, entity.CurrencyId, entity.Enabled, entity.CreatedAt, entity.UpdatedAt);
+        return new SubscriptionTypeDto
+        {
+            Id = entity.Id, Name = entity.Name, PricePerMonth = entity.PricePerMonth,
+            Discount = entity.Discount, CurrencyId = entity.CurrencyId, Enabled = entity.Enabled,
+            CreatedAt = entity.CreatedAt, UpdatedAt = entity.UpdatedAt
+        };
     }
 }

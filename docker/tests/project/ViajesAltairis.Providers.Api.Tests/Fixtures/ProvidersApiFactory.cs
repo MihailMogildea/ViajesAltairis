@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using StackExchange.Redis;
 using ViajesAltairis.ProvidersApi.Controllers;
 using ViajesAltairis.ProvidersApi.Repositories;
 using ViajesAltairis.ProvidersApi.Services;
@@ -14,6 +15,8 @@ public class ProvidersApiFactory : WebApplicationFactory<ProvidersController>
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        builder.UseEnvironment("Testing");
+
         builder.ConfigureServices(services =>
         {
             // Remove the hosted service so it doesn't run on startup
@@ -35,6 +38,9 @@ public class ProvidersApiFactory : WebApplicationFactory<ProvidersController>
 
             services.AddSingleton(MockProviderRepo);
             services.AddSingleton(MockHotelSyncRepo);
+
+            // Provide a mock IConnectionMultiplexer so SyncService can be resolved
+            services.AddSingleton(Substitute.For<IConnectionMultiplexer>());
         });
     }
 }

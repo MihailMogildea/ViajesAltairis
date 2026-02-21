@@ -51,13 +51,14 @@ export const fallbackTranslations: Record<string, Record<string, string>> = {
     // Hotel card
     "client.hotel_card.review": "review",
     "client.hotel_card.reviews": "reviews",
-    "client.hotel_card.per_night": "per night",
+    "client.hotel_card.per_night": "per room / night",
 
     // Room card
     "client.room.capacity": "Capacity:",
     "client.room.guest": "guest",
     "client.room.guests": "guests",
     "client.room.available": "available",
+    "client.room.option": "Option",
     "client.room.meal_plan": "Meal plan",
     "client.room.rooms": "Rooms",
     "client.room.per_room_night": "per room / night",
@@ -186,6 +187,16 @@ export const fallbackTranslations: Record<string, Record<string, string>> = {
     "client.booking.cvc": "CVC",
     "client.booking.demo_disclaimer": "This is a demo — no real payment will be processed.",
     "client.booking.back_to_review": "Back to review",
+    "client.booking.tax": "Taxes (est.)",
+    "client.booking.subscription_discount": "Subscription discount",
+    "client.booking.member_discount": "Member discount",
+    "client.booking.confirm_bank_transfer": "Confirm Bank Transfer",
+    "client.booking.bank_transfer_confirm_note": "After confirming, you will receive the bank transfer details and your reservation code to use as payment reference.",
+    "client.booking.bank_transfer_min_days": "Bank transfer requires at least {days} days before check-in",
+    "client.booking.bank_transfer_instructions": "Please transfer the total amount to the following bank account. Your reservation will be confirmed once we receive the payment.",
+    "client.booking.beneficiary": "Beneficiary",
+    "client.booking.amount": "Amount",
+    "client.booking.bank_transfer_note": "Please use your reservation code as the payment reference.",
 
     // Confirmation page
     "client.confirmation.title": "Booking Confirmed!",
@@ -196,6 +207,10 @@ export const fallbackTranslations: Record<string, Record<string, string>> = {
     "client.confirmation.email_sent": "A confirmation email has been sent to your email address.",
     "client.confirmation.view_reservations": "View My Reservations",
     "client.confirmation.continue": "Continue Browsing",
+    "client.confirmation.pending_title": "Reservation Pending",
+    "client.confirmation.pending_message": "Your reservation will be confirmed once we receive the bank transfer.",
+    "client.confirmation.bank_transfer_title": "Bank Transfer Details",
+    "client.confirmation.reference": "Reference",
 
     // Reservations page
     "client.reservations.title": "My Reservations",
@@ -225,6 +240,8 @@ export const fallbackTranslations: Record<string, Record<string, string>> = {
     "client.reservations.submit_review": "Submit Review",
     "client.reservations.submitting_review": "Submitting...",
     "client.reservations.cancel_review": "Cancel",
+    "client.reservations.export_invoice": "Export Invoice",
+    "client.reservations.generating_invoice": "Generating...",
 
     // Profile page
     "client.profile.title": "My Profile",
@@ -284,6 +301,8 @@ export const fallbackTranslations: Record<string, Record<string, string>> = {
     "client.invoices.tax": "Tax",
     "client.invoices.total": "Total",
     "client.invoices.view_reservation": "View Reservation",
+    "client.invoices.download_pdf": "Download PDF",
+    "client.invoices.downloading": "Downloading...",
 
     // Subscriptions
     "client.subscriptions.title": "Subscription Plans",
@@ -296,6 +315,9 @@ export const fallbackTranslations: Record<string, Record<string, string>> = {
     "client.subscriptions.discount_off": "discount on bookings",
     "client.subscriptions.active_until": "Active until",
     "client.subscriptions.login_to_subscribe": "Login to Subscribe",
+    "client.subscriptions.cancel": "Cancel Subscription",
+    "client.subscriptions.back_to_plans": "Back to plans",
+    "client.subscriptions.subscribing_to": "Subscribing to",
 
     // Pagination
     "client.pagination.previous": "Previous",
@@ -304,6 +326,14 @@ export const fallbackTranslations: Record<string, Record<string, string>> = {
     // Destination card
     "client.destination.hotel": "hotel",
     "client.destination.hotels": "hotels",
+
+    // Reservation statuses
+    "client.status.draft": "Draft",
+    "client.status.pending": "Pending",
+    "client.status.confirmed": "Confirmed",
+    "client.status.checked_in": "Checked In",
+    "client.status.completed": "Completed",
+    "client.status.cancelled": "Cancelled",
 
     // Common
     "client.common.loading": "Loading...",
@@ -357,13 +387,14 @@ export const fallbackTranslations: Record<string, Record<string, string>> = {
     // Hotel card
     "client.hotel_card.review": "reseña",
     "client.hotel_card.reviews": "reseñas",
-    "client.hotel_card.per_night": "por noche",
+    "client.hotel_card.per_night": "por hab. / noche",
 
     // Room card
     "client.room.capacity": "Capacidad:",
     "client.room.guest": "huésped",
     "client.room.guests": "huéspedes",
     "client.room.available": "disponibles",
+    "client.room.option": "Opción",
     "client.room.meal_plan": "Régimen",
     "client.room.rooms": "Habitaciones",
     "client.room.per_room_night": "por habitación / noche",
@@ -492,6 +523,16 @@ export const fallbackTranslations: Record<string, Record<string, string>> = {
     "client.booking.cvc": "CVC",
     "client.booking.demo_disclaimer": "Esto es una demo — no se procesará ningún pago real.",
     "client.booking.back_to_review": "Volver a la revisión",
+    "client.booking.tax": "Impuestos (est.)",
+    "client.booking.subscription_discount": "Descuento de suscripción",
+    "client.booking.member_discount": "Descuento de miembro",
+    "client.booking.confirm_bank_transfer": "Confirmar Transferencia",
+    "client.booking.bank_transfer_confirm_note": "Tras confirmar, recibirás los datos bancarios y tu código de reserva para usar como referencia de pago.",
+    "client.booking.bank_transfer_min_days": "La transferencia bancaria requiere al menos {days} días antes del check-in",
+    "client.booking.bank_transfer_instructions": "Por favor, transfiere el importe total a la siguiente cuenta bancaria. Tu reserva se confirmará una vez recibamos el pago.",
+    "client.booking.beneficiary": "Beneficiario",
+    "client.booking.amount": "Importe",
+    "client.booking.bank_transfer_note": "Por favor, usa tu código de reserva como referencia de pago.",
 
     // Confirmation page
     "client.confirmation.title": "¡Reserva Confirmada!",
@@ -502,6 +543,10 @@ export const fallbackTranslations: Record<string, Record<string, string>> = {
     "client.confirmation.email_sent": "Se ha enviado un email de confirmación a tu dirección de correo.",
     "client.confirmation.view_reservations": "Ver Mis Reservas",
     "client.confirmation.continue": "Seguir Navegando",
+    "client.confirmation.pending_title": "Reserva Pendiente",
+    "client.confirmation.pending_message": "Tu reserva se confirmará una vez recibamos la transferencia bancaria.",
+    "client.confirmation.bank_transfer_title": "Datos de Transferencia Bancaria",
+    "client.confirmation.reference": "Referencia",
 
     // Reservations page
     "client.reservations.title": "Mis Reservas",
@@ -531,6 +576,8 @@ export const fallbackTranslations: Record<string, Record<string, string>> = {
     "client.reservations.submit_review": "Enviar Reseña",
     "client.reservations.submitting_review": "Enviando...",
     "client.reservations.cancel_review": "Cancelar",
+    "client.reservations.export_invoice": "Exportar Factura",
+    "client.reservations.generating_invoice": "Generando...",
 
     // Profile page
     "client.profile.title": "Mi Perfil",
@@ -590,6 +637,8 @@ export const fallbackTranslations: Record<string, Record<string, string>> = {
     "client.invoices.tax": "Impuestos",
     "client.invoices.total": "Total",
     "client.invoices.view_reservation": "Ver Reserva",
+    "client.invoices.download_pdf": "Descargar PDF",
+    "client.invoices.downloading": "Descargando...",
 
     // Subscriptions
     "client.subscriptions.title": "Planes de Suscripción",
@@ -602,6 +651,9 @@ export const fallbackTranslations: Record<string, Record<string, string>> = {
     "client.subscriptions.discount_off": "descuento en reservas",
     "client.subscriptions.active_until": "Activa hasta",
     "client.subscriptions.login_to_subscribe": "Inicia Sesión para Suscribirte",
+    "client.subscriptions.cancel": "Cancelar Suscripción",
+    "client.subscriptions.back_to_plans": "Volver a planes",
+    "client.subscriptions.subscribing_to": "Suscribiéndose a",
 
     // Pagination
     "client.pagination.previous": "Anterior",
@@ -610,6 +662,14 @@ export const fallbackTranslations: Record<string, Record<string, string>> = {
     // Destination card
     "client.destination.hotel": "hotel",
     "client.destination.hotels": "hoteles",
+
+    // Reservation statuses
+    "client.status.draft": "Borrador",
+    "client.status.pending": "Pendiente",
+    "client.status.confirmed": "Confirmada",
+    "client.status.checked_in": "Registrado",
+    "client.status.completed": "Completada",
+    "client.status.cancelled": "Cancelada",
 
     // Common
     "client.common.loading": "Cargando...",

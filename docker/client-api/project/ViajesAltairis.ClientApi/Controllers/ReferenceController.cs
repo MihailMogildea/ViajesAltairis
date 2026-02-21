@@ -3,7 +3,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ViajesAltairis.Application.Features.Client.Reference.Queries.GetCountries;
 using ViajesAltairis.Application.Features.Client.Reference.Queries.GetCurrencies;
+using ViajesAltairis.Application.Features.Client.Reference.Queries.GetHotelTaxes;
 using ViajesAltairis.Application.Features.Client.Reference.Queries.GetLanguages;
+using ViajesAltairis.Application.Features.Client.Reference.Queries.GetPaymentMethods;
 using ViajesAltairis.Application.Features.Client.Reference.Queries.GetWebTranslations;
 
 namespace ViajesAltairis.ClientApi.Controllers;
@@ -45,6 +47,20 @@ public class ReferenceController : ControllerBase
     public async Task<IActionResult> GetTranslations()
     {
         var result = await _mediator.Send(new GetWebTranslationsQuery());
+        return Ok(result);
+    }
+
+    [HttpGet("taxes/{hotelId:long}")]
+    public async Task<IActionResult> GetHotelTaxes(long hotelId)
+    {
+        var result = await _mediator.Send(new GetHotelTaxesQuery { HotelId = hotelId });
+        return Ok(result);
+    }
+
+    [HttpGet("payment-methods")]
+    public async Task<IActionResult> GetPaymentMethods()
+    {
+        var result = await _mediator.Send(new GetPaymentMethodsQuery());
         return Ok(result);
     }
 }

@@ -6,6 +6,8 @@ import { apiFetch } from "@/lib/api";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { ReservationsTable } from "./reservations-table";
 import type { ReservationAdminDto, ReservationStatusDto } from "@/types/reservation";
+import type { UserOption } from "./actions";
+import type { TranslationDto, LanguageDto } from "@/types/system";
 
 export default async function ReservationsPage() {
   const session = await getSession();
@@ -15,15 +17,34 @@ export default async function ReservationsPage() {
 
   let reservations: ReservationAdminDto[] = [];
   let statuses: ReservationStatusDto[] = [];
+  let users: UserOption[] = [];
+  let translations: TranslationDto[] = [];
+  let languages: LanguageDto[] = [];
   let error: string | null = null;
 
   try {
-    [reservations, statuses] = await Promise.all([
+    [reservations, statuses, translations, languages] = await Promise.all([
       apiFetch<ReservationAdminDto[]>("/api/Reservations", { cache: "no-store" }),
       apiFetch<ReservationStatusDto[]>("/api/ReservationStatuses", { cache: "no-store" }),
+      apiFetch<TranslationDto[]>("/api/Translations", { cache: "no-store" }),
+      apiFetch<LanguageDto[]>("/api/Languages", { cache: "no-store" }),
     ]);
+    // Users list is used for filtering — B2B agents can't access /api/Users, so fetch separately
+    try {
+      users = await apiFetch<UserOption[]>("/api/Users", { cache: "no-store" });
+    } catch {
+      // B2B agents get an empty user list (no user filter needed)
+    }
   } catch (e) {
     error = e instanceof Error ? e.message : "Failed to load reservations";
+  }
+
+  const langId = languages.find((l) => l.isoCode === locale)?.id ?? 1;
+  const rsNames: Record<number, string> = {};
+  for (const tr of translations) {
+    if (tr.entityType === "reservation_status" && tr.field === "name" && tr.languageId === langId) {
+      rsNames[tr.entityId] = tr.value;
+    }
   }
 
   return (
@@ -50,6 +71,8 @@ export default async function ReservationsPage() {
         <ReservationsTable
           reservations={reservations}
           statuses={statuses}
+          users={users}
+          rsNames={rsNames}
           access={access}
           t={t}
         />

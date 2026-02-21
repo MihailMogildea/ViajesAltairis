@@ -9,7 +9,7 @@ import type { ApiProfileResponse, ApiCountry } from "@/types";
 
 export default function ProfilePage() {
   const { user, refreshProfile } = useAuth();
-  const { t } = useLocale();
+  const { locale, t } = useLocale();
 
   const [profile, setProfile] = useState<ApiProfileResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -46,7 +46,7 @@ export default function ProfilePage() {
         setLastName(user.last_name);
       })
       .finally(() => setLoading(false));
-  }, [user]);
+  }, [user, locale]);
 
   // Match country name from profile to country ID once both are loaded
   useEffect(() => {

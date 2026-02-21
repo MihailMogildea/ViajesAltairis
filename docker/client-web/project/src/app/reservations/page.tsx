@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { useLocale } from "@/context/LocaleContext";
 import { formatPrice, formatDate, calculateNights } from "@/lib/utils";
-import { apiGetMyReservations, apiGetReservationDetail, apiCancelReservation, apiSubmitReview } from "@/lib/api";
+import { useRouter } from "next/navigation";
+import { apiGetMyReservations, apiGetReservationDetail, apiCancelReservation, apiSubmitReview, apiGenerateInvoice } from "@/lib/api";
 import type { Reservation, ApiReservationSummary, ApiReservationDetail } from "@/types";
 
 const sampleReservations: Reservation[] = [
@@ -65,6 +66,7 @@ function mapApiSummaryToReservation(s: ApiReservationSummary): Reservation {
     total: s.totalAmount,
     created_at: s.createdAt,
     lines: [],
+    hotel_names: s.hotelNames ?? undefined,
   };
 }
 
@@ -98,7 +100,8 @@ function applyApiDetail(res: Reservation, detail: ApiReservationDetail): Reserva
 
 export default function ReservationsPage() {
   const { user } = useAuth();
-  const { locale, currency, t } = useLocale();
+  const router = useRouter();
+  const { locale, t } = useLocale();
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -111,8 +114,7 @@ export default function ReservationsPage() {
   const [reviewComment, setReviewComment] = useState("");
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewSuccess, setReviewSuccess] = useState<Set<number>>(new Set());
-
-  const fp = (amount: number) => formatPrice(amount, currency.code, locale);
+  const [generatingInvoiceId, setGeneratingInvoiceId] = useState<number | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -123,11 +125,10 @@ export default function ReservationsPage() {
         setLoaded(true);
       })
       .catch(() => {
-        // Fall back to sample data
-        setReservations(sampleReservations.filter((r) => r.user_id === user.id));
+        setReservations([]);
         setLoaded(true);
       });
-  }, [user]);
+  }, [user, locale]);
 
   // Fetch detail when expanding a reservation
   useEffect(() => {
@@ -139,7 +140,7 @@ export default function ReservationsPage() {
         );
       })
       .catch(() => { /* keep what we have */ });
-  }, [expandedId]);
+  }, [expandedId, locale]);
 
   async function handleCancel(id: number) {
     setCancellingId(id);
@@ -177,6 +178,18 @@ export default function ReservationsPage() {
       setReviewRating(5);
       setReviewTitle("");
       setReviewComment("");
+    }
+  }
+
+  async function handleGenerateInvoice(reservationId: number) {
+    setGeneratingInvoiceId(reservationId);
+    try {
+      await apiGenerateInvoice(reservationId);
+      router.push("/invoices");
+    } catch {
+      // silently fail
+    } finally {
+      setGeneratingInvoiceId(null);
     }
   }
 
@@ -227,16 +240,16 @@ export default function ReservationsPage() {
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-mono text-sm font-semibold text-gray-900">{res.code}</span>
                   <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColors[res.status]}`}>
-                    {res.status}
+                    {t(`client.status.${res.status}`)}
                   </span>
                 </div>
                 <p className="mt-1 text-sm text-gray-500">
-                  {res.lines.length > 0 ? res.lines.map((l) => l.hotel_name).join(", ") : t("client.reservations.loading_details")}
+                  {res.lines.length > 0 ? res.lines.map((l) => l.hotel_name).join(", ") : res.hotel_names ?? t("client.reservations.loading_details")}
                 </p>
                 <p className="text-xs text-gray-400">{t("client.reservations.booked")} {formatDate(res.created_at, locale)}</p>
               </div>
               <div className="ml-4 text-right">
-                <p className="text-lg font-bold text-gray-900">{fp(res.total)}</p>
+                <p className="text-lg font-bold text-gray-900">{formatPrice(res.total, res.currency_code, locale)}</p>
                 <svg className={`ml-auto h-5 w-5 text-gray-400 transition-transform ${expandedId === res.id ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                 </svg>
@@ -261,7 +274,7 @@ export default function ReservationsPage() {
                               {formatDate(line.check_in, locale)} — {formatDate(line.check_out, locale)} ({line.nights} {line.nights === 1 ? t("client.booking.night") : t("client.booking.nights")})
                             </p>
                           </div>
-                          <p className="font-medium text-gray-900">{fp(line.line_total)}</p>
+                          <p className="font-medium text-gray-900">{formatPrice(line.line_total, res.currency_code, locale)}</p>
                         </div>
                         {line.guests.length > 0 && (
                           <div className="mt-2">
@@ -292,31 +305,42 @@ export default function ReservationsPage() {
                     )}
                     <div className="mt-3 border-t border-gray-200 pt-3 text-sm">
                       <div className="flex justify-between text-gray-500">
-                        <span>{t("client.reservations.subtotal")}</span><span>{fp(res.subtotal)}</span>
+                        <span>{t("client.reservations.subtotal")}</span><span>{formatPrice(res.subtotal, res.currency_code, locale)}</span>
                       </div>
                       {res.discount_total > 0 && (
                         <div className="flex justify-between text-green-600">
-                          <span>{t("client.reservations.discount")}</span><span>-{fp(res.discount_total)}</span>
+                          <span>{t("client.reservations.discount")}</span><span>-{formatPrice(res.discount_total, res.currency_code, locale)}</span>
                         </div>
                       )}
                       <div className="flex justify-between text-gray-500">
-                        <span>{t("client.reservations.tax")}</span><span>{fp(res.tax_total)}</span>
+                        <span>{t("client.reservations.tax")}</span><span>{formatPrice(res.tax_total, res.currency_code, locale)}</span>
                       </div>
                       <div className="flex justify-between font-bold text-gray-900">
-                        <span>{t("client.reservations.total")}</span><span>{fp(res.total)}</span>
+                        <span>{t("client.reservations.total")}</span><span>{formatPrice(res.total, res.currency_code, locale)}</span>
                       </div>
                     </div>
 
-                    {/* Cancel button for pending/confirmed */}
-                    {(res.status === "pending" || res.status === "confirmed") && (
-                      <div className="mt-4 border-t border-gray-200 pt-3">
-                        <button
-                          onClick={() => handleCancel(res.id)}
-                          disabled={cancellingId === res.id}
-                          className="rounded-lg bg-red-50 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-100 transition-colors disabled:opacity-50"
-                        >
-                          {cancellingId === res.id ? t("client.reservations.cancelling") : t("client.reservations.cancel")}
-                        </button>
+                    {/* Action buttons for pending/confirmed/completed */}
+                    {(res.status === "pending" || res.status === "confirmed" || res.status === "completed") && (
+                      <div className="mt-4 border-t border-gray-200 pt-3 flex gap-2">
+                        {(res.status === "pending" || res.status === "confirmed") && (
+                          <button
+                            onClick={() => handleCancel(res.id)}
+                            disabled={cancellingId === res.id}
+                            className="rounded-lg bg-red-50 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-100 transition-colors disabled:opacity-50"
+                          >
+                            {cancellingId === res.id ? t("client.reservations.cancelling") : t("client.reservations.cancel")}
+                          </button>
+                        )}
+                        {(res.status === "confirmed" || res.status === "completed") && (
+                          <button
+                            onClick={() => handleGenerateInvoice(res.id)}
+                            disabled={generatingInvoiceId === res.id}
+                            className="rounded-lg bg-blue-50 px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-100 transition-colors disabled:opacity-50"
+                          >
+                            {generatingInvoiceId === res.id ? t("client.reservations.generating_invoice") : t("client.reservations.export_invoice")}
+                          </button>
+                        )}
                       </div>
                     )}
                   </>

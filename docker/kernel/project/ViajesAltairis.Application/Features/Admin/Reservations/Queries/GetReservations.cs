@@ -23,8 +23,8 @@ public class GetReservationsHandler : IRequestHandler<GetReservationsQuery, IEnu
     public async Task<IEnumerable<ReservationAdminDto>> Handle(GetReservationsQuery request, CancellationToken cancellationToken)
     {
         using var connection = _db.CreateConnection();
-        var rows = (await connection.QueryAsync<ReservationAdminDto>(
-            @"SELECT
+        var partnerId = _currentUser.BusinessPartnerId;
+        var sql = @"SELECT
                 vrs.reservation_id AS Id, vrs.reservation_code AS ReservationCode,
                 vrs.status_id AS StatusId, vrs.status_name AS StatusName,
                 vrs.booked_by_user_id AS BookedByUserId,
@@ -46,7 +46,10 @@ public class GetReservationsHandler : IRequestHandler<GetReservationsQuery, IEnu
                 vrs.created_at AS CreatedAt, vrs.updated_at AS UpdatedAt
               FROM v_reservation_summary vrs
               JOIN reservation r ON r.id = vrs.reservation_id
-              ORDER BY vrs.created_at DESC")).ToList();
+              JOIN user ub ON ub.id = r.booked_by_user_id"
+            + (partnerId.HasValue ? " WHERE ub.business_partner_id = @PartnerId" : "")
+            + " ORDER BY vrs.created_at DESC";
+        var rows = (await connection.QueryAsync<ReservationAdminDto>(sql, new { PartnerId = partnerId })).ToList();
 
         // Currency conversion for admin display
         var displayCurrency = _currentUser.CurrencyCode;

@@ -40,11 +40,8 @@ var app = builder.Build();
 
 app.UseHttpMetrics();
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.MapControllers();
 app.MapMetrics();

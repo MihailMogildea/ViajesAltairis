@@ -1,64 +1,126 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { EmailTemplateDto } from "@/types/system";
+import { EmailTemplateDto, TranslationDto, LanguageDto } from "@/types/system";
 import { DataTable, Column } from "@/components/data-table";
 import { FormModal } from "@/components/form-modal";
 import { FormField } from "@/components/form-field";
-import { ConfirmDialog } from "@/components/confirm-dialog";
 import { ToastMessage } from "@/components/toast-message";
 import { SectionHeader } from "@/components/section-header";
-import {
-  createEmailTemplate,
-  updateEmailTemplate,
-  deleteEmailTemplate,
-} from "./actions";
+import { createTranslation, updateTranslation } from "./actions";
+
+interface LanguageFields {
+  subjectTranslationId: number | null;
+  bodyTranslationId: number | null;
+  subject: string;
+  body: string;
+}
 
 export function EmailTemplatesTable({
   emailTemplates: initial,
+  translations: initialTranslations,
+  languages,
   t,
 }: {
   emailTemplates: EmailTemplateDto[];
+  translations: TranslationDto[];
+  languages: LanguageDto[];
   t: Record<string, string>;
 }) {
-  const [items, setItems] = useState(initial);
+  const [items] = useState(initial);
+  const [translations, setTranslations] = useState(initialTranslations);
   const [editing, setEditing] = useState<EmailTemplateDto | null>(null);
-  const [deleting, setDeleting] = useState<EmailTemplateDto | null>(null);
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [showCreate, setShowCreate] = useState(false);
 
-  const [formName, setFormName] = useState("");
+  // Per-language form state: { [languageId]: { subject, body } }
+  const [langFields, setLangFields] = useState<Record<number, LanguageFields>>({});
 
   const dismissMessage = useCallback(() => setMessage(null), []);
 
-  function openCreate() {
-    setFormName("");
-    setShowCreate(true);
-    setMessage(null);
+  function findTranslation(entityId: number, field: string, languageId: number) {
+    return translations.find(
+      (tr) =>
+        tr.entityType === "email_template" &&
+        tr.entityId === entityId &&
+        tr.field === field &&
+        tr.languageId === languageId
+    );
   }
 
   function openEdit(item: EmailTemplateDto) {
-    setFormName(item.name);
+    const fields: Record<number, LanguageFields> = {};
+    for (const lang of languages) {
+      const subjectTr = findTranslation(item.id, "subject", lang.id);
+      const bodyTr = findTranslation(item.id, "body", lang.id);
+      fields[lang.id] = {
+        subjectTranslationId: subjectTr?.id ?? null,
+        bodyTranslationId: bodyTr?.id ?? null,
+        subject: subjectTr?.value ?? "",
+        body: bodyTr?.value ?? "",
+      };
+    }
+    setLangFields(fields);
     setEditing(item);
     setMessage(null);
   }
 
+  function updateField(languageId: number, field: "subject" | "body", value: string) {
+    setLangFields((prev) => ({
+      ...prev,
+      [languageId]: { ...prev[languageId], [field]: value },
+    }));
+  }
+
   async function handleSave() {
+    if (!editing) return;
     setPending(true);
     setMessage(null);
     try {
-      if (editing) {
-        const updated = await updateEmailTemplate(editing.id, { name: formName });
-        setItems((prev) => prev.map((i) => (i.id === editing.id ? updated : i)));
-        setEditing(null);
-        setMessage(t["admin.toast.updated"] ?? "Updated successfully.");
-      } else {
-        const created = await createEmailTemplate({ name: formName });
-        setItems((prev) => [...prev, created]);
-        setShowCreate(false);
-        setMessage(t["admin.toast.created"] ?? "Created successfully.");
+      const updatedTranslations = [...translations];
+
+      for (const lang of languages) {
+        const lf = langFields[lang.id];
+        if (!lf) continue;
+
+        // Save subject
+        const subjectPayload = {
+          entityType: "email_template",
+          entityId: editing.id,
+          field: "subject",
+          languageId: lang.id,
+          value: lf.subject,
+        };
+        if (lf.subjectTranslationId) {
+          const updated = await updateTranslation(lf.subjectTranslationId, subjectPayload);
+          const idx = updatedTranslations.findIndex((tr) => tr.id === lf.subjectTranslationId);
+          if (idx >= 0) updatedTranslations[idx] = updated;
+        } else if (lf.subject) {
+          const created = await createTranslation(subjectPayload);
+          updatedTranslations.push(created);
+        }
+
+        // Save body
+        const bodyPayload = {
+          entityType: "email_template",
+          entityId: editing.id,
+          field: "body",
+          languageId: lang.id,
+          value: lf.body,
+        };
+        if (lf.bodyTranslationId) {
+          const updated = await updateTranslation(lf.bodyTranslationId, bodyPayload);
+          const idx = updatedTranslations.findIndex((tr) => tr.id === lf.bodyTranslationId);
+          if (idx >= 0) updatedTranslations[idx] = updated;
+        } else if (lf.body) {
+          const created = await createTranslation(bodyPayload);
+          updatedTranslations.push(created);
+        }
       }
+
+      setTranslations(updatedTranslations);
+      setEditing(null);
+      setMessage(t["admin.toast.updated"] ?? "Updated successfully.");
     } catch (e) {
       setMessage(e instanceof Error ? e.message : "Save failed");
     } finally {
@@ -66,25 +128,28 @@ export function EmailTemplatesTable({
     }
   }
 
-  async function handleDelete() {
-    if (!deleting) return;
-    setPending(true);
-    setMessage(null);
-    try {
-      await deleteEmailTemplate(deleting.id);
-      setItems((prev) => prev.filter((i) => i.id !== deleting.id));
-      setDeleting(null);
-      setMessage(t["admin.toast.deleted"] ?? "Deleted successfully.");
-    } catch (e) {
-      setMessage(e instanceof Error ? e.message : "Delete failed");
-    } finally {
-      setPending(false);
-    }
+  // Helper: get a preview of the subject for a given template (first language)
+  function getSubjectPreview(templateId: number): string {
+    const tr = translations.find(
+      (tr) =>
+        tr.entityType === "email_template" &&
+        tr.entityId === templateId &&
+        tr.field === "subject" &&
+        tr.languageId === languages[0]?.id
+    );
+    return tr?.value ?? "";
   }
 
   const columns: Column<EmailTemplateDto>[] = [
     { key: "id", header: "ID", className: "w-20" },
-    { key: "name", header: t["admin.label.name"] ?? "Name" },
+    { key: "name", header: t["admin.label.key"] ?? "Key" },
+    {
+      key: "subject",
+      header: t["admin.label.subject"] ?? "Subject",
+      render: (item: EmailTemplateDto) => (
+        <span className="text-gray-500">{getSubjectPreview(item.id)}</span>
+      ),
+    },
   ];
 
   return (
@@ -93,14 +158,9 @@ export function EmailTemplatesTable({
 
       <SectionHeader
         title={t["admin.system.email_templates"] ?? "Email Templates"}
-        description={t["admin.system.email_templates.desc"] ?? "Manage email template definitions."}
-        action={
-          <button
-            onClick={openCreate}
-            className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-          >
-            {t["admin.action.create"] ?? "Create"}
-          </button>
+        description={
+          t["admin.system.email_templates.desc"] ??
+          "Edit email template subjects and bodies per language."
         }
       />
 
@@ -110,59 +170,50 @@ export function EmailTemplatesTable({
         keyField="id"
         emptyMessage={t["admin.label.no_data"] ?? "No email templates found."}
         actions={(item) => (
-          <>
-            <button
-              onClick={() => openEdit(item)}
-              className="rounded border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
-            >
-              {t["admin.action.edit"] ?? "Edit"}
-            </button>
-            <button
-              onClick={() => setDeleting(item)}
-              className="rounded border border-red-300 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-50"
-            >
-              {t["admin.action.delete"] ?? "Delete"}
-            </button>
-          </>
+          <button
+            onClick={() => openEdit(item)}
+            className="rounded border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+          >
+            {t["admin.action.edit"] ?? "Edit"}
+          </button>
         )}
       />
 
       <FormModal
-        open={showCreate || !!editing}
+        open={!!editing}
+        wide
         title={
-          editing
-            ? t["admin.email_templates.edit"] ?? "Edit Email Template"
-            : t["admin.email_templates.create"] ?? "Create Email Template"
+          (t["admin.email_templates.edit"] ?? "Edit Email Template") +
+          (editing ? ` — ${editing.name}` : "")
         }
-        onClose={() => { setShowCreate(false); setEditing(null); }}
+        onClose={() => setEditing(null)}
         onSubmit={handleSave}
         loading={pending}
         saveLabel={t["admin.action.save"] ?? "Save"}
         cancelLabel={t["admin.action.cancel"] ?? "Cancel"}
       >
-        <FormField
-          label={t["admin.label.name"] ?? "Name"}
-          value={formName}
-          onChange={(v) => setFormName(String(v))}
-          required
-        />
+        {languages.map((lang) => (
+          <div key={lang.id} className="space-y-3">
+            <h4 className="text-sm font-semibold text-gray-800">
+              {lang.name} ({lang.isoCode.toUpperCase()})
+            </h4>
+            <FormField
+              label={t["admin.label.subject"] ?? "Subject"}
+              value={langFields[lang.id]?.subject ?? ""}
+              onChange={(v) => updateField(lang.id, "subject", String(v))}
+            />
+            <FormField
+              label={t["admin.label.body"] ?? "Body"}
+              type="textarea"
+              value={langFields[lang.id]?.body ?? ""}
+              onChange={(v) => updateField(lang.id, "body", String(v))}
+            />
+            {lang.id !== languages[languages.length - 1]?.id && (
+              <hr className="border-gray-200" />
+            )}
+          </div>
+        ))}
       </FormModal>
-
-      <ConfirmDialog
-        open={!!deleting}
-        title={t["admin.confirm.delete_title"] ?? "Confirm Delete"}
-        message={
-          (t["admin.confirm.delete_message"] ?? 'Delete "{name}"?').replace(
-            "{name}",
-            deleting?.name ?? ""
-          )
-        }
-        onConfirm={handleDelete}
-        onCancel={() => setDeleting(null)}
-        loading={pending}
-        confirmLabel={t["admin.action.delete"] ?? "Delete"}
-        cancelLabel={t["admin.action.cancel"] ?? "Cancel"}
-      />
     </>
   );
 }

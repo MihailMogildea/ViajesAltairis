@@ -244,6 +244,22 @@ INSERT INTO web_translation (translation_key, language_id, value) VALUES
 ('admin.financial.invoice_status', 2, 'Estado de Factura'),
 ('admin.financial.total_amount', 1, 'Total Amount'),
 ('admin.financial.total_amount', 2, 'Importe Total'),
+('admin.financial.tab.billing-export', 1, 'Billing Export'),
+('admin.financial.tab.billing-export', 2, 'Exportación de Facturación'),
+('admin.financial.billing.from', 1, 'From'),
+('admin.financial.billing.from', 2, 'Desde'),
+('admin.financial.billing.to', 1, 'To'),
+('admin.financial.billing.to', 2, 'Hasta'),
+('admin.financial.billing.channel_client', 1, 'Client Web'),
+('admin.financial.billing.channel_client', 2, 'Web de Clientes'),
+('admin.financial.billing.channel_external', 1, 'External Clients (B2B)'),
+('admin.financial.billing.channel_external', 2, 'Clientes Externos (B2B)'),
+('admin.financial.billing.channel_staff', 1, 'Staff Bookings'),
+('admin.financial.billing.channel_staff', 2, 'Reservas de Personal'),
+('admin.financial.billing.download', 1, 'Download ZIP'),
+('admin.financial.billing.download', 2, 'Descargar ZIP'),
+('admin.financial.billing.generating', 1, 'Generating...'),
+('admin.financial.billing.generating', 2, 'Generando...'),
 
 -- Pricing
 ('admin.pricing.seasonal_margins', 1, 'Seasonal Margins'),
@@ -485,4 +501,14 @@ INSERT INTO web_translation (translation_key, language_id, value) VALUES
 ('admin.reservations.field.payment_method', 1, 'Payment Method'),
 ('admin.reservations.field.payment_method', 2, 'Método de Pago'),
 ('admin.reservations.select_payment_method', 1, 'Select payment method...'),
-('admin.reservations.select_payment_method', 2, 'Seleccionar método de pago...');
+('admin.reservations.select_payment_method', 2, 'Seleccionar método de pago...'),
+
+-- Financial — transaction filters
+('admin.financial.filter.from', 1, 'From'),
+('admin.financial.filter.from', 2, 'Desde'),
+('admin.financial.filter.to', 1, 'To'),
+('admin.financial.filter.to', 2, 'Hasta'),
+('admin.financial.filter.status', 1, 'Status'),
+('admin.financial.filter.status', 2, 'Estado'),
+('admin.financial.filter.all_statuses', 1, 'All statuses'),
+('admin.financial.filter.all_statuses', 2, 'Todos los estados');

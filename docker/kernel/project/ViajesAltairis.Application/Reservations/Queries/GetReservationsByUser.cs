@@ -25,7 +25,7 @@ public class GetReservationsByUserHandler : IRequestHandler<GetReservationsByUse
         var countSql = $"""
             SELECT COUNT(*) FROM reservation r
             JOIN reservation_status rs ON rs.id = r.status_id
-            WHERE r.booked_by_user_id = @UserId {statusFilter}
+            WHERE (r.owner_user_id = @UserId OR r.booked_by_user_id = @UserId) {statusFilter}
             """;
 
         var totalCount = await Dapper.SqlMapper.ExecuteScalarAsync<int>(
@@ -34,11 +34,17 @@ public class GetReservationsByUserHandler : IRequestHandler<GetReservationsByUse
         var querySql = $"""
             SELECT r.id, rs.name AS status, r.created_at, r.total_price,
                    c.iso_code AS currency_code,
-                   (SELECT COUNT(*) FROM reservation_line rl WHERE rl.reservation_id = r.id) AS line_count
+                   (SELECT COUNT(*) FROM reservation_line rl WHERE rl.reservation_id = r.id) AS line_count,
+                   (SELECT GROUP_CONCAT(DISTINCT h.name ORDER BY h.name SEPARATOR ', ')
+                    FROM reservation_line rl
+                    JOIN hotel_provider_room_type hprt ON hprt.id = rl.hotel_provider_room_type_id
+                    JOIN hotel_provider hp ON hp.id = hprt.hotel_provider_id
+                    JOIN hotel h ON h.id = hp.hotel_id
+                    WHERE rl.reservation_id = r.id) AS hotel_names
             FROM reservation r
             JOIN reservation_status rs ON rs.id = r.status_id
             JOIN currency c ON c.id = r.currency_id
-            WHERE r.booked_by_user_id = @UserId {statusFilter}
+            WHERE (r.owner_user_id = @UserId OR r.booked_by_user_id = @UserId) {statusFilter}
             ORDER BY r.created_at DESC
             LIMIT @PageSize OFFSET @Offset
             """;
@@ -52,7 +58,8 @@ public class GetReservationsByUserHandler : IRequestHandler<GetReservationsByUse
             (DateTime)r.created_at,
             (decimal)r.total_price,
             (string)r.currency_code,
-            (int)r.line_count)).ToList();
+            Convert.ToInt32(r.line_count),
+            (string?)r.hotel_names)).ToList();
 
         return new ReservationListResult(summaries, totalCount);
     }

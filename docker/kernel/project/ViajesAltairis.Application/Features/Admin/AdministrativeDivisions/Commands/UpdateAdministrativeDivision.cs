@@ -5,7 +5,7 @@ using ViajesAltairis.Domain.Interfaces;
 
 namespace ViajesAltairis.Application.Features.Admin.AdministrativeDivisions.Commands;
 
-public record UpdateAdministrativeDivisionCommand(long Id, long CountryId, long? ParentId, string Name, long TypeId, byte Level) : IRequest<AdministrativeDivisionDto>;
+public record UpdateAdministrativeDivisionCommand(long Id, long CountryId, long? ParentId, string Name, long TypeId, int Level) : IRequest<AdministrativeDivisionDto>;
 
 public class UpdateAdministrativeDivisionHandler : IRequestHandler<UpdateAdministrativeDivisionCommand, AdministrativeDivisionDto>
 {
@@ -26,9 +26,9 @@ public class UpdateAdministrativeDivisionHandler : IRequestHandler<UpdateAdminis
         entity.ParentId = request.ParentId;
         entity.Name = request.Name;
         entity.TypeId = request.TypeId;
-        entity.Level = request.Level;
+        entity.Level = (byte)request.Level;
         await _repository.UpdateAsync(entity, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-        return new AdministrativeDivisionDto(entity.Id, entity.CountryId, entity.ParentId, entity.Name, entity.TypeId, entity.Level, entity.Enabled, entity.CreatedAt);
+        return new AdministrativeDivisionDto { Id = entity.Id, CountryId = entity.CountryId, ParentId = entity.ParentId, Name = entity.Name, TypeId = entity.TypeId, Level = entity.Level, Enabled = entity.Enabled, CreatedAt = entity.CreatedAt };
     }
 }

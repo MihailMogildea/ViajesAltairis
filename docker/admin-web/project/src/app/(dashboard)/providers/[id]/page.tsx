@@ -12,7 +12,7 @@ import type {
   HotelProviderRoomTypeDto,
   HotelProviderRoomTypeBoardDto,
 } from "@/types/hotel";
-import type { CurrencyDto, RoomTypeDto, BoardTypeDto, ExchangeRateDto } from "@/types/system";
+import type { CurrencyDto, RoomTypeDto, BoardTypeDto, ExchangeRateDto, TranslationDto, LanguageDto } from "@/types/system";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -38,6 +38,8 @@ export default async function ProviderDetailPage({ params }: Props) {
   let hpRoomTypes: HotelProviderRoomTypeDto[] = [];
   let hpRoomTypeBoards: HotelProviderRoomTypeBoardDto[] = [];
   let exchangeRates: ExchangeRateDto[] = [];
+  let translations: TranslationDto[] = [];
+  let languages: LanguageDto[] = [];
   let error: string | null = null;
 
   try {
@@ -52,6 +54,8 @@ export default async function ProviderDetailPage({ params }: Props) {
       hpRoomTypes,
       hpRoomTypeBoards,
       exchangeRates,
+      translations,
+      languages,
     ] = await Promise.all([
       apiFetch<ProviderDto>(`/api/Providers/${providerId}`, { cache: "no-store" }),
       apiFetch<ProviderTypeDto[]>("/api/ProviderTypes", { cache: "no-store" }),
@@ -63,9 +67,24 @@ export default async function ProviderDetailPage({ params }: Props) {
       apiFetch<HotelProviderRoomTypeDto[]>("/api/HotelProviderRoomTypes", { cache: "no-store" }),
       apiFetch<HotelProviderRoomTypeBoardDto[]>("/api/HotelProviderRoomTypeBoards", { cache: "no-store" }),
       apiFetch<ExchangeRateDto[]>("/api/ExchangeRates", { cache: "no-store" }),
+      apiFetch<TranslationDto[]>("/api/Translations", { cache: "no-store" }),
+      apiFetch<LanguageDto[]>("/api/Languages", { cache: "no-store" }),
     ]);
   } catch (e) {
     error = e instanceof Error ? e.message : "Failed to load provider details";
+  }
+
+  const langId = languages.find((l) => l.isoCode === locale)?.id ?? 1;
+  const rtNames: Record<number, string> = {};
+  const btNames: Record<number, string> = {};
+  for (const tr of translations) {
+    if (tr.field === "name" && tr.languageId === langId) {
+      if (tr.entityType === "room_type") {
+        rtNames[tr.entityId] = tr.value;
+      } else if (tr.entityType === "board_type") {
+        btNames[tr.entityId] = tr.value;
+      }
+    }
   }
 
   return (
@@ -91,6 +110,8 @@ export default async function ProviderDetailPage({ params }: Props) {
           hpRoomTypes={hpRoomTypes}
           hpRoomTypeBoards={hpRoomTypeBoards}
           exchangeRates={exchangeRates}
+          rtNames={rtNames}
+          btNames={btNames}
           t={t}
           access={access}
         />

@@ -7,11 +7,11 @@ import { hotels } from "@/data/hotels";
 import { useLocale } from "@/context/LocaleContext";
 
 const destinations = [
-  { name: "Mallorca", country: "Spain", hotelCount: 12, imageColor: "0891B2" },
-  { name: "Barcelona", country: "Spain", hotelCount: 3, imageColor: "7C3AED" },
-  { name: "Ibiza", country: "Spain", hotelCount: 2, imageColor: "DC2626" },
-  { name: "Menorca", country: "Spain", hotelCount: 2, imageColor: "059669" },
-  { name: "Côte d'Azur", country: "France", hotelCount: 3, imageColor: "2563EB" },
+  { name: "Mallorca", country: "Spain", hotelCount: 12 },
+  { name: "Barcelona", country: "Spain", hotelCount: 3 },
+  { name: "Ibiza", country: "Spain", hotelCount: 2 },
+  { name: "Menorca", country: "Spain", hotelCount: 2 },
+  { name: "Côte d'Azur", country: "France", hotelCount: 3 },
 ];
 
 const popularHotels = hotels
@@ -35,19 +35,21 @@ export default function HomePage() {
               {t("client.home.hero_subtitle")}
             </p>
           </div>
-          <div className="mx-auto max-w-5xl rounded-xl bg-white p-4 shadow-xl sm:p-6">
+          <div className="rounded-xl bg-white p-4 shadow-xl sm:p-6">
             <SearchBar />
           </div>
         </div>
       </section>
 
       {/* Featured destinations */}
-      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
-        <h2 className="mb-6 text-2xl font-bold text-gray-900">{t("client.home.popular_destinations")}</h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          {destinations.map((d) => (
-            <DestinationCard key={d.name} {...d} />
-          ))}
+      <section className="px-4 py-12 sm:px-6">
+        <div className="mx-auto max-w-7xl">
+          <h2 className="mb-6 text-2xl font-bold text-gray-900">{t("client.home.popular_destinations")}</h2>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            {destinations.map((d) => (
+              <DestinationCard key={d.name} {...d} />
+            ))}
+          </div>
         </div>
       </section>
 
@@ -64,7 +66,8 @@ export default function HomePage() {
       </section>
 
       {/* Why book with us */}
-      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
+      <section className="px-4 py-12 sm:px-6">
+        <div className="mx-auto max-w-7xl">
         <h2 className="mb-8 text-center text-2xl font-bold text-gray-900">{t("client.home.why_book")}</h2>
         <div className="grid gap-8 sm:grid-cols-3">
           <div className="text-center">
@@ -88,6 +91,7 @@ export default function HomePage() {
             <h3 className="font-semibold text-gray-900">{t("client.home.support_24")}</h3>
             <p className="mt-1 text-sm text-gray-500">{t("client.home.support_24_desc")}</p>
           </div>
+        </div>
         </div>
       </section>
     </div>

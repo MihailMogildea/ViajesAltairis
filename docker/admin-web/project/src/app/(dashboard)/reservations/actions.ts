@@ -89,11 +89,18 @@ export async function changeStatus(
   });
 }
 
+export interface SubmitResult {
+  reservationId: number;
+  status: string;
+  totalAmount: number;
+  currencyCode: string;
+}
+
 export async function submitReservation(
   id: number,
   payload: SubmitReservationRequest
-): Promise<void> {
-  await apiFetch(`/api/Reservations/${id}/submit`, {
+): Promise<SubmitResult> {
+  return apiFetch<SubmitResult>(`/api/Reservations/${id}/submit`, {
     method: "POST",
     body: JSON.stringify(payload),
   });
@@ -112,6 +119,7 @@ export async function cancelReservation(
 export interface HotelOption {
   id: number;
   name: string;
+  margin: number;
   enabled: boolean;
 }
 
@@ -156,6 +164,11 @@ export async function fetchPaymentMethods(): Promise<PaymentMethodOption[]> {
   return apiFetch<PaymentMethodOption[]>("/api/PaymentMethods", { cache: "no-store" });
 }
 
+export interface ProviderOption {
+  id: number;
+  margin: number;
+}
+
 export interface HotelProviderOption {
   id: number;
   hotelId: number;
@@ -173,6 +186,10 @@ export interface BoardTypeOption {
   name: string;
 }
 
+export async function fetchProviders(): Promise<ProviderOption[]> {
+  return apiFetch<ProviderOption[]>("/api/Providers", { cache: "no-store" });
+}
+
 export async function fetchHotelProviders(): Promise<HotelProviderOption[]> {
   return apiFetch<HotelProviderOption[]>("/api/HotelProviders", { cache: "no-store" });
 }
@@ -183,4 +200,21 @@ export async function fetchRoomTypes(): Promise<RoomTypeOption[]> {
 
 export async function fetchBoardTypes(): Promise<BoardTypeOption[]> {
   return apiFetch<BoardTypeOption[]>("/api/BoardTypes", { cache: "no-store" });
+}
+
+export interface UserOption {
+  id: number;
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone: string | null;
+  taxId: string | null;
+  address: string | null;
+  city: string | null;
+  postalCode: string | null;
+  country: string | null;
+}
+
+export async function fetchUsers(): Promise<UserOption[]> {
+  return apiFetch<UserOption[]>("/api/Users", { cache: "no-store" });
 }

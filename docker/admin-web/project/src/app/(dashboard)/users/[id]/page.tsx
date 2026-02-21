@@ -6,7 +6,7 @@ import { getAccessLevel } from "@/lib/permissions";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { UserDetail } from "./user-detail";
 import type { UserDto, UserTypeDto, UserHotelDto, UserSubscriptionDto } from "@/types/user";
-import type { LanguageDto } from "@/types/system";
+import type { LanguageDto, TranslationDto } from "@/types/system";
 import type { HotelDto } from "@/types/hotel";
 import type { SubscriptionTypeDto } from "@/types/subscription";
 import type { BusinessPartnerDto } from "@/types/business-partner";
@@ -32,6 +32,7 @@ export default async function UserDetailPage({
   let userSubscriptions: UserSubscriptionDto[] = [];
   let businessPartners: BusinessPartnerDto[] = [];
   let providers: ProviderDto[] = [];
+  let translations: TranslationDto[] = [];
   let error: string | null = null;
 
   try {
@@ -45,6 +46,7 @@ export default async function UserDetailPage({
       userSubscriptions,
       businessPartners,
       providers,
+      translations,
     ] = await Promise.all([
       apiFetch<UserDto>(`/api/Users/${id}`, { cache: "no-store" }),
       apiFetch<UserTypeDto[]>("/api/UserTypes", { cache: "no-store" }),
@@ -55,9 +57,18 @@ export default async function UserDetailPage({
       apiFetch<UserSubscriptionDto[]>(`/api/UserSubscriptions?userId=${id}`, { cache: "no-store" }),
       apiFetch<BusinessPartnerDto[]>("/api/BusinessPartners", { cache: "no-store" }),
       apiFetch<ProviderDto[]>("/api/Providers", { cache: "no-store" }),
+      apiFetch<TranslationDto[]>("/api/Translations", { cache: "no-store" }),
     ]);
   } catch (e) {
     error = e instanceof Error ? e.message : "Failed to load user data";
+  }
+
+  const langId = languages.find((l) => l.isoCode === locale)?.id ?? 1;
+  const utNames: Record<number, string> = {};
+  for (const tr of translations) {
+    if (tr.entityType === "user_type" && tr.field === "name" && tr.languageId === langId) {
+      utNames[tr.entityId] = tr.value;
+    }
   }
 
   return (
@@ -88,6 +99,7 @@ export default async function UserDetailPage({
           userSubscriptions={userSubscriptions}
           businessPartners={businessPartners}
           providers={providers}
+          utNames={utNames}
           access={access}
           t={t}
         />

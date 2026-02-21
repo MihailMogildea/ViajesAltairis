@@ -7,12 +7,21 @@ import StarRating from "./StarRating";
 import { formatPrice } from "@/lib/utils";
 import { useLocale } from "@/context/LocaleContext";
 
-export default function HotelCard({ hotel }: { hotel: Hotel }) {
+function buildQuery(checkIn?: string, checkOut?: string, guests?: number): string {
+  const params = new URLSearchParams();
+  if (checkIn) params.set("checkIn", checkIn);
+  if (checkOut) params.set("checkOut", checkOut);
+  if (guests && guests !== 2) params.set("guests", String(guests));
+  const qs = params.toString();
+  return qs ? `?${qs}` : "";
+}
+
+export default function HotelCard({ hotel, checkIn, checkOut, guests }: { hotel: Hotel; checkIn?: string; checkOut?: string; guests?: number }) {
   const { locale, currency, t } = useLocale();
   const mainImage = hotel.images[0];
 
   return (
-    <Link href={`/hotels/${hotel.id}`} className="group flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white transition-shadow hover:shadow-lg">
+    <Link href={`/hotels/${hotel.id}${buildQuery(checkIn, checkOut, guests)}`} className="group flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white transition-shadow hover:shadow-lg">
       <div className="aspect-[16/10] overflow-hidden bg-gray-100">
         {mainImage && (
           <img
@@ -43,7 +52,7 @@ export default function HotelCard({ hotel }: { hotel: Hotel }) {
             )}
           </div>
           <div className="text-right">
-            <span className="text-lg font-bold text-gray-900">{formatPrice(hotel.min_price, currency.code, locale)}</span>
+            <span className="text-lg font-bold text-gray-900">{formatPrice(hotel.min_price, currency.code, locale, currency.exchangeRateToEur)}</span>
             <span className="block text-xs text-gray-400">{t("client.hotel_card.per_night")}</span>
           </div>
         </div>

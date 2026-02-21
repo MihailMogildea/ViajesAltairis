@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using ViajesAltairis.Application.Features.Client.Subscriptions.Commands.CancelSubscription;
 using ViajesAltairis.Application.Features.Client.Subscriptions.Commands.Subscribe;
 using ViajesAltairis.Application.Features.Client.Subscriptions.Queries.GetMySubscription;
 using ViajesAltairis.Application.Features.Client.Subscriptions.Queries.GetSubscriptionPlans;
@@ -39,5 +40,12 @@ public class SubscriptionsController : ControllerBase
     {
         var result = await _mediator.Send(command);
         return Ok(result);
+    }
+
+    [HttpDelete("me")]
+    public async Task<IActionResult> CancelSubscription()
+    {
+        await _mediator.Send(new CancelSubscriptionCommand());
+        return NoContent();
     }
 }

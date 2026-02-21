@@ -1,12 +1,20 @@
 import type { Hotel, SearchFilters } from "@/types";
 
-export function formatPrice(amount: number, currency = "EUR", locale = "en"): string {
+/**
+ * Format a price for display.
+ * @param amount - Price in EUR (base currency)
+ * @param currency - Target currency code for symbol/formatting
+ * @param locale - Display locale
+ * @param rateToEur - Exchange rate: 1 unit of target currency = X EUR. Pass 1 if amount is already in target currency.
+ */
+export function formatPrice(amount: number, currency = "EUR", locale = "en", rateToEur = 1): string {
+  const converted = rateToEur > 0 ? amount / rateToEur : amount;
   const intlLocale = locale === "es" ? "es-ES" : "en-US";
   return new Intl.NumberFormat(intlLocale, {
     style: "currency",
     currency,
     minimumFractionDigits: 2,
-  }).format(amount);
+  }).format(converted);
 }
 
 export function formatDate(date: string, locale = "en"): string {

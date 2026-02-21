@@ -30,6 +30,8 @@ public class CurrentUserService : ICurrentUserService
     public string? UserType =>
         _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.Role);
 
+    public long? BusinessPartnerId => null;
+
     public long LanguageId
     {
         get
